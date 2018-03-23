@@ -28,7 +28,7 @@ include_directories(~/catkin_ws/src/place_detection_isl/src)
 include_directories(~/catkin_ws/src/place_detection_isl/src/bubble)
 
 set(bubble_space_SOURCES ${main_directory}/bubble/bubbleprocess.cpp ${main_directory}/database/databasemanager.cpp src/bdst.cpp )# src/pcprocessing.cpp)
-set(bubble_space_NSOURCES ${main_directory}/bubble/dfc.cpp ${main_directory}/bubble/invariants.cpp ${main_directory}/imageprocess/imageprocess.cpp ${main_directory}/Utility.cpp src/cluster.c)
+set(bubble_space_NSOURCES ${main_directory}/imageprocess/imageprocess.cpp ${main_directory}/Utility.cpp src/cluster.c)
 set(bubble_space_HEADERS ${main_directory}/bubble/bubbleprocess.h ${main_directory}/database/databasemanager.h src/bdst.h)# include/bubble_space/pcprocessing.h)
 set(bubble_space_NHEADERS ${main_directory}/imageprocess/imageprocess.h ${main_directory}/Utility.h src/cluster.h)# include/bubble_space/pcprocessing.h)
 

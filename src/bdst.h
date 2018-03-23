@@ -15,13 +15,7 @@ public:
     float val;
     int parentConnection;
     bool isused;
-
-
-
-
 };
-
-
 
 class BDST : public QObject
 {
