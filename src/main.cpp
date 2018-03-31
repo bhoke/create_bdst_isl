@@ -107,8 +107,6 @@ TopologicalMap topmap;
 
 Place currentPlace;
 
-bool performRecognition = false;
-
 BDST* bdst ;
 
 DatabaseManager dbmanager;
@@ -153,10 +151,9 @@ void updateTopologicalMap(int node1, int node2)
 
     // Write relation to the topological map
     knowledgedbmanager.insertTopologicalMapRelation(topmap.connections.size(),mapNode);
-
-
-
 }
+
+
 // A function to convert a place to a learned place
 LearnedPlace convertPlacetoLearnedPlace(Place place)
 {
@@ -207,8 +204,6 @@ void placeCallback(std_msgs::Int16 placeId)
     }
 
     currentPlaces.push_back(aPlace);
-    performRecognition = true;
-
 }
 
 
@@ -263,20 +258,6 @@ void mainFilePathCallback(std_msgs::String mainfp)
 
     }
 
-    QString processingPerImageFilePath = mainFilePath;
-
-    processingPerImageFilePath = processingPerImageFilePath.append("/undperImage.txt");
-
-    file.setFileName(processingPerImageFilePath);
-
-    if(file.open(QFile::WriteOnly))
-    {
-        qDebug()<<"Understanding per Image file Path has been opened";
-        strm.setDevice(&file);
-
-    }
-
-
     QString placeTreeFileName = mainFilePath;
     placeTreeFileName = placeTreeFileName.append("/placeTree.txt");
 
@@ -289,12 +270,6 @@ void mainFilePathCallback(std_msgs::String mainfp)
     }
 
 }
-bool checkIfFirst(Place aPlace)
-{
-    if(currentPlace.id == aPlace.id) return true;
-
-    return false;
-}
 
 int main (int argc, char** argv)
 {
@@ -303,18 +278,15 @@ int main (int argc, char** argv)
     ros::NodeHandle nh;
     ros::NodeHandle pnh("~");
 
-    //tau_h = 0.1;
-    //tau_r = 1.4;
-    tau_l = 2;
-    //tau_r = 2.5;
-    tau_r = 0;
-    tau_h=0;
+    tau_h = 0;
+    tau_r = 1.4;
+    tau_r = 2.5;
 
     // get recognition parameters
     pnh.getParam("tau_h",tau_h);
     pnh.getParam("tau_r",tau_r);
     pnh.getParam("tau_l",tau_l);
-    qDebug()<<"Parameters"<<tau_h<<tau_r<<tau_l;
+    qDebug()<<"Parameters: "<<tau_h<<tau_r<<tau_l;
 
     ros::Subscriber sbc = nh.subscribe<std_msgs::Int16>("placeDetectionISL/placeID",5, placeCallback);
     ros::Subscriber filepathsubscriber = nh.subscribe<std_msgs::String>("placeDetectionISL/mainFilePath",2,mainFilePathCallback);
@@ -323,129 +295,35 @@ int main (int argc, char** argv)
 
     while(ros::ok())
     {
-
         ros::spinOnce();
-
-        if(places.size() >= MIN_NO_PLACES && performRecognition && currentPlaces.size() > 0)
+        if(places.size() >= MIN_NO_PLACES)
         {
+            // Perform Top Down BDST recognition to recognize the current place, to use Bottom up recognition use performBottomUpBDSTRecognition function
+            int result = -1;//performTopDownBDSTRecognition(tau_r,tau_l,bdst,currentPlace);
+            // int result= performBottomUpBDSTRecognition(tau_r,tau_l,bdst,currentPlace); //performTopDownBDSTRecognition(1.25,2,bdst,currentPlace);
 
-            //qint64 starttime = QDateTime::currentMSecsSinceEpoch();
-            performRecognition = false;
+            // if recognized, result is the recognized place id, if -1, the place is not recongized.
 
-            currentPlace = currentPlaces[0];
-
-            currentPlaces.erase(std::remove_if(currentPlaces.begin(), currentPlaces.end(), checkIfFirst), currentPlaces.end());
-            // Do we have a bdst?
-            if(bdst)
-
+            if(result < 0) // No recognition case
             {
-                // Perform Top Down BDST recognition to recognize the current place, to use Bottom up recognition use performBottomUpBDSTRecognition function
-                int result = -1;//performTopDownBDSTRecognition(tau_r,tau_l,bdst,currentPlace);
-                // int result= performBottomUpBDSTRecognition(tau_r,tau_l,bdst,currentPlace); //performTopDownBDSTRecognition(1.25,2,bdst,currentPlace);
-
-                // if recognized, result is the recognized place id, if -1, the place is not recongized.
-
-                // We didn't recognize
-                if(result < 0)
-                {
-                    // convert current place to a learned one and update the topological map
-                    LearnedPlace anewLearnedPlace = convertPlacetoLearnedPlace(currentPlace);
-
-                    updateTopologicalMap(lastTopMapNodeId,anewLearnedPlace.id);
-
-                    LearnedPlace subcluster = convertPlacetoLearnedPlace(currentPlace);
-
-                    updateTopologicalMap(lastTopMapNodeId,subcluster.id);
-
-                    // add learned place to whole places and reperform BDST calculations
-                    places.push_back(anewLearnedPlace);
-                    places.push_back(subcluster);
-
-                    constructInvariantsMatrix(places);
-
-                    performBDSTCalculations();
-
-                }
-                else
-                {
-                    // We should just update the place that bdst belongs to
-                    // The topological map will not be updated only the last node should be updated
-                    qDebug()<<"Recognized state"<<result + 1;
-                    LearnedPlace recognizedPlace = places[result];
-
-                    Mat totalMemberInvariants;
-
-                    cv::hconcat(currentPlace.memberInvariants,recognizedPlace.memberInvariants,totalMemberInvariants);
-
-                    recognizedPlace.memberInvariants = totalMemberInvariants;
-
-                    recognizedPlace.calculateMeanInvariant();
-
-                    Mat totalMemberIds;
-
-                    cv::vconcat(currentPlace.memberIds,recognizedPlace.memberIds,totalMemberIds);
-
-                    recognizedPlace.memberIds = totalMemberIds;
-
-                    cv::Mat temp = cv::Mat(1,1,CV_16UC1);
-                    temp.at<unsigned short>(0,0) = (unsigned short)currentPlace.id;
-
-                    Mat totalMemberPlaces;
-
-                    cv::vconcat(temp,recognizedPlace.memberPlaces,totalMemberPlaces);
-
-                    recognizedPlace.memberPlaces = totalMemberPlaces;
-
-                    for(int k = 0; k < recognizedPlace.memberPlaces.rows; k++)
-                    {
-                        qDebug()<<"Members of recognized place"<<recognizedPlace.memberPlaces.at<unsigned short>(k,0);
-                    }
-
-                    places[result] = recognizedPlace;
-
-                    knowledgedbmanager.insertLearnedPlace(recognizedPlace);
-
-                    updateTopologicalMap(lastTopMapNodeId,recognizedPlace.id);
-
-                    lastTopMapNodeId = recognizedPlace.id;
-
-                }
-            }
-        }
-
-        else if(places.size() >= MIN_NO_PLACES)
-        {
-
-            // We have enough places, we should generate the bdst
-            if(!bdst)
-            {
-                constructInvariantsMatrix(places);
-                performBDSTCalculations();
-                performRecognition = false;
+                // convert current place to a learned one and update the topological map
+                // add learned place to whole places and create tree
             }
 
+            else //Recognition case
+            {
+                // We should just update the place that new place belongs to
+                // The topological map will not be updated only the last node should be updated
+            }
         }
 
         loop.sleep();
-
-    }
-
-    // insert BDST level to the knowledge database
-    if(bdst)
-    {
-        for(int i = 0 ; i < bdst->levels.size(); i++)
-        {
-            knowledgedbmanager.insertBDSTLevel(i+1,bdst->levels[i]);
-        }
     }
 
     file.close();
     dbmanager.closeDB();
 
     ros::shutdown();
-
-    if(bdst)
-        bdst->deleteLater();
 
     qDebug()<< "Close place tree File ";
     placeTreeFile.close();
@@ -456,7 +334,7 @@ int main (int argc, char** argv)
 //Function which clusters a single place into subplaces
 void clusterPlace(Place pl)
 {
-    Mat currentInvariants = pl.memberInvariants;    
+    Mat currentInvariants = pl.memberInvariants;
     int nrows = currentInvariants.rows;
     int ncols = currentInvariants.cols;
     std::cout << ncols << std::endl;
@@ -493,7 +371,7 @@ void clusterPlace(Place pl)
 
     for(int i = 0; i < ncols -1 ; ++i)
     {
-        std::cout << "Node " << -i-1 << "\t";
+        //        std::cout << "Node " << -i-1 << "\t";
         int k = placeTree[i].left;
         std::cout << k << "\t";
         cv::Mat curInv,sqrInv;
@@ -513,7 +391,7 @@ void clusterPlace(Place pl)
             sumSq[i] += sqrInv.at<double>(0,0);
         }
         int j = placeTree[i].right;
-        std::cout << j << std::endl;
+        std::cout << j << "\t" << placeTree[i].distance << std::endl;
         if (j < 0)
         {
             sum[i] += sum[-j-1];
@@ -533,12 +411,12 @@ void clusterPlace(Place pl)
         cv::Mat meanSq;
         cv::mulTransposed(treeMean[i],meanSq,true);
         var[i] = sumSq[i] / level[i] - meanSq.at<double>(0,0);
-        std::cout << std::setprecision(15) <<"variance = " << var[i] << std::endl;
-        std::cout << std::setprecision(15) <<"sumSq = " << sumSq[i] << std::endl;
-        std::cout << std::setprecision(15) <<"MeanSq = "<< meanSq.at<double>(0,0) << std::endl;
-        std::cout << "Level = "<< level[i] << std::endl;
-        std:: cout << "------------------------------------------------------" << std::endl;
-        std::cin.get();
+        //        std::cout << std::setprecision(15) <<"variance = " << var[i] << std::endl;
+        //        std::cout << std::setprecision(15) <<"sumSq = " << sumSq[i] << std::endl;
+        //        std::cout << std::setprecision(15) <<"MeanSq = "<< meanSq.at<double>(0,0) << std::endl;
+        //        std::cout << "Level = "<< level[i] << std::endl;
+        //        std:: cout << "------------------------------------------------------" << std::endl;
+        //        std::cin.get();
     }
 }
 
@@ -581,10 +459,10 @@ void performBDSTCalculations()
 
     bdst =  new BDST;
 
-   // calculateMergedBDST(tau_h,nrows-1,nrows,binarytree,bdst);
+    // calculateMergedBDST(tau_h,nrows-1,nrows,binarytree,bdst);
 
     // construct merged bdst from the contructed binary tree
-     calculateMergedBDSTv2(tau_h,nrows-1,nrows,binarytree,bdst);
+    calculateMergedBDSTv2(tau_h,nrows-1,nrows,binarytree,bdst);
 
 
     free(binarytree);
@@ -637,15 +515,15 @@ double** calculateDistanceMatrix(int nrows, int ncols, double** data, int** mask
                 distMatrix[i][j] = sqrt(distMatrix[i][j]*600);
     }
 
-//    printf("   Place:");
-//    for(i=0; i<nrows-1; i++) printf("%6d", i);
-//    printf("\n");
-//    for(i=0; i<nrows; i++)
-//    { printf("Gene %2d:",i);
-//        for(j=0; j<i; j++) printf(" %5.4f",distMatrix[i][j]);
-//        printf("\n");
-//    }
-//    printf("\n");
+    //    printf("   Place:");
+    //    for(i=0; i<nrows-1; i++) printf("%6d", i);
+    //    printf("\n");
+    //    for(i=0; i<nrows; i++)
+    //    { printf("Gene %2d:",i);
+    //        for(j=0; j<i; j++) printf(" %5.4f",distMatrix[i][j]);
+    //        printf("\n");
+    //    }
+    //    printf("\n");
     delete weight;
     return distMatrix;
 }
@@ -678,8 +556,8 @@ Node* calculateBinaryBDST(int nrows, int ncols, double** data)
 
     Node* tree;
 
-//    printf("\n");
-//    printf("================ Pairwise single linkage clustering ============\n");
+    //    printf("\n");
+    //    printf("================ Pairwise single linkage clustering ============\n");
     /* Since we have the distance matrix here, we may as well use it. */
     tree = treecluster(nrows, ncols, 0, 0, 0, 0, 'e', 's', distmatrix);
     /* The distance matrix was modified by treecluster, so we cannot use it any
@@ -778,62 +656,62 @@ void calculateMergedBDSTv2(float tau_h, int nnodes, int noplaces, Node* tree, BD
         // The leaf has been unused we should check the perimeter
         if(!aLeaf.isused)
         {
-             Level aLevel;
+            Level aLevel;
 
-             aLevel.members.push_back(aLeaf.left);
-             aLevel.members.push_back(aLeaf.right);
+            aLevel.members.push_back(aLeaf.left);
+            aLevel.members.push_back(aLeaf.right);
 
-             aLevel.parentNodes.push_back(aLeaf.parentConnection);
+            aLevel.parentNodes.push_back(aLeaf.parentConnection);
 
-             aLevel.val = aLeaf.val + tau_h;
+            aLevel.val = aLeaf.val + tau_h;
 
-             leaves[i].isused = true;
+            leaves[i].isused = true;
 
-             if(aLeaf.right < noplaces && aLeaf.left < noplaces)
-                 txtstr<<aLeaf.left+1<<" "<<aLeaf.right+1<<" "<<aLeaf.val+tau_h<<" "<<"\n";
-             else if(aLeaf.right < noplaces)
-                 txtstr<<aLeaf.left<<" "<<aLeaf.right+1<<" "<<aLeaf.val+tau_h<<" "<<"\n";
-             else if(aLeaf.left < noplaces)
-                 txtstr<<aLeaf.left+1<<" "<<aLeaf.right<<" "<<aLeaf.val+tau_h<<" "<<"\n";
-             else
-                 txtstr<<aLeaf.left<<" "<<aLeaf.right<<" "<<aLeaf.val+tau_h<<" "<<"\n";
-
-
-
-             // We are looking for the following leaves
-             for(uint k = i ; k < leaves.size(); k++)
-             {
-                 // The leaf should be unused and the value should be less than level value
-                 if(!leaves[k].isused && leaves[k].val <= aLevel.val)
-                 {
-                     if(aLeaf.parentConnection == leaves[k].left && leaves[k].right > noplaces)
-                     {
-
-                       //  aLevel.parentNodes.push_back(leaves[k].left);
-                         aLevel.parentNodes.push_back(leaves[k].right);
-
-                     }
-                     else if(aLeaf.parentConnection == leaves[k].left && leaves[k].right < noplaces)
-                     {
-
-                         //  aLevel.parentNodes.push_back(leaves[k].left);
-                         aLevel.members.push_back(leaves[k].right);
-
-                     }
-                     else if(aLeaf.parentConnection == leaves[k].right && leaves[k].left > noplaces)
-                     {
-                         aLevel.parentNodes.push_back(leaves[k].left);
-                     }
-                     else if(aLeaf.parentConnection == leaves[k].right && leaves[k].left < noplaces)
-                     {
-                         aLevel.members.push_back(leaves[k].left);
-
-                     }
+            if(aLeaf.right < noplaces && aLeaf.left < noplaces)
+                txtstr<<aLeaf.left+1<<" "<<aLeaf.right+1<<" "<<aLeaf.val+tau_h<<" "<<"\n";
+            else if(aLeaf.right < noplaces)
+                txtstr<<aLeaf.left<<" "<<aLeaf.right+1<<" "<<aLeaf.val+tau_h<<" "<<"\n";
+            else if(aLeaf.left < noplaces)
+                txtstr<<aLeaf.left+1<<" "<<aLeaf.right<<" "<<aLeaf.val+tau_h<<" "<<"\n";
+            else
+                txtstr<<aLeaf.left<<" "<<aLeaf.right<<" "<<aLeaf.val+tau_h<<" "<<"\n";
 
 
-                     if(aLeaf.parentConnection == leaves[k].right || aLeaf.parentConnection == leaves[k].left )
-                     {
-                         leaves[k].isused = true;
+
+            // We are looking for the following leaves
+            for(uint k = i ; k < leaves.size(); k++)
+            {
+                // The leaf should be unused and the value should be less than level value
+                if(!leaves[k].isused && leaves[k].val <= aLevel.val)
+                {
+                    if(aLeaf.parentConnection == leaves[k].left && leaves[k].right > noplaces)
+                    {
+
+                        //  aLevel.parentNodes.push_back(leaves[k].left);
+                        aLevel.parentNodes.push_back(leaves[k].right);
+
+                    }
+                    else if(aLeaf.parentConnection == leaves[k].left && leaves[k].right < noplaces)
+                    {
+
+                        //  aLevel.parentNodes.push_back(leaves[k].left);
+                        aLevel.members.push_back(leaves[k].right);
+
+                    }
+                    else if(aLeaf.parentConnection == leaves[k].right && leaves[k].left > noplaces)
+                    {
+                        aLevel.parentNodes.push_back(leaves[k].left);
+                    }
+                    else if(aLeaf.parentConnection == leaves[k].right && leaves[k].left < noplaces)
+                    {
+                        aLevel.members.push_back(leaves[k].left);
+
+                    }
+
+
+                    if(aLeaf.parentConnection == leaves[k].right || aLeaf.parentConnection == leaves[k].left )
+                    {
+                        leaves[k].isused = true;
 
                         aLevel.parentNodes.push_back(leaves[k].parentConnection);
 
@@ -847,85 +725,37 @@ void calculateMergedBDSTv2(float tau_h, int nnodes, int noplaces, Node* tree, BD
                             txtstr<<leaves[k].left<<" "<<leaves[k].right<<" "<<aLevel.val<<" "<<"\n";
 
                         aLeaf.parentConnection = leaves[k].parentConnection;
-                     }
-                 }
-             }
+                    }
+                }
+            }
 
-             // We are looking for the following leaves second time
-             for(uint k = i ; k < leaves.size(); k++)
-             {
-                 if(!leaves[k].isused && leaves[k].val <= aLevel.val)
-                 {
+            // We are looking for the following leaves second time
+            for(uint k = i ; k < leaves.size(); k++)
+            {
+                if(!leaves[k].isused && leaves[k].val <= aLevel.val)
+                {
                     // I have found the parent connection so I should add this to leaf to the current level
-                     if(std::find(aLevel.parentNodes.begin(), aLevel.parentNodes.end(), leaves[k].parentConnection)!=aLevel.parentNodes.end())
-                     {
-                          aLevel.members.push_back(leaves[k].right);
-                          aLevel.members.push_back(leaves[k].left);
+                    if(std::find(aLevel.parentNodes.begin(), aLevel.parentNodes.end(), leaves[k].parentConnection)!=aLevel.parentNodes.end())
+                    {
+                        aLevel.members.push_back(leaves[k].right);
+                        aLevel.members.push_back(leaves[k].left);
 
-                          leaves[k].isused = true;
+                        leaves[k].isused = true;
 
-                          if(leaves[k].right < noplaces && leaves[k].left < noplaces)
-                              txtstr<<leaves[k].left+1<<" "<<leaves[k].right+1<<" "<<aLevel.val<<" "<<"\n";
-                          else if(leaves[k].right < noplaces)
-                              txtstr<<leaves[k].left<<" "<<leaves[k].right+1<<" "<<aLevel.val<<" "<<"\n";
-                          else if(leaves[k].left < noplaces)
-                              txtstr<<leaves[k].left+1<<" "<<leaves[k].right<<" "<<aLevel.val<<" "<<"\n";
-                          else
-                              txtstr<<leaves[k].left<<" "<<leaves[k].right<<" "<<aLevel.val<<" "<<"\n";
-                     }
-                 }
-             }
-             bdst->levels.append(aLevel);
+                        if(leaves[k].right < noplaces && leaves[k].left < noplaces)
+                            txtstr<<leaves[k].left+1<<" "<<leaves[k].right+1<<" "<<aLevel.val<<" "<<"\n";
+                        else if(leaves[k].right < noplaces)
+                            txtstr<<leaves[k].left<<" "<<leaves[k].right+1<<" "<<aLevel.val<<" "<<"\n";
+                        else if(leaves[k].left < noplaces)
+                            txtstr<<leaves[k].left+1<<" "<<leaves[k].right<<" "<<aLevel.val<<" "<<"\n";
+                        else
+                            txtstr<<leaves[k].left<<" "<<leaves[k].right<<" "<<aLevel.val<<" "<<"\n";
+                    }
+                }
+            }
+            bdst->levels.append(aLevel);
         }
     }
-//    // Merging starts here
-//    for(uint i = 0; i < leaves.size(); i++)
-//    {
-//        if(!leaves.at(i).isused)
-//        {
-//            for(int j = 0; j < bdst->levels.size(); j++)
-//            {
-//                if(fabs(bdst->levels.at(j).val-leaves.at(i).val) <= tau_h)
-//                {
-//                    TreeLeaf aLeaf = leaves[i];
-
-//                    aLeaf.isused = true;
-
-//                    if(aLeaf.left < noplaces)
-//                    {
-//                        bdst->levels[j].members.push_back(aLeaf.left);
-
-//                    }
-//                    else if(aLeaf.left > noplaces)
-//                    {
-//                        bdst->levels[j].parentNodes.push_back(aLeaf.left);
-
-//                    }
-//                    if(aLeaf.right < noplaces)
-//                    {
-//                        bdst->levels[j].members.push_back(aLeaf.right);
-
-//                    }
-//                    else if(aLeaf.right > noplaces)
-//                    {
-//                        bdst->levels[j].parentNodes.push_back(aLeaf.right);
-
-//                    }
-
-//                    if(aLeaf.right < noplaces && aLeaf.left < noplaces)
-//                        txtstr<<aLeaf.left+1<<" "<<aLeaf.right+1<<" "<<bdst->levels[j].val<<" "<<"\n";
-//                    else if(aLeaf.right < noplaces)
-//                        txtstr<<aLeaf.left<<" "<<aLeaf.right+1<<" "<<bdst->levels[j].val<<" "<<"\n";
-//                    else if(aLeaf.left < noplaces)
-//                        txtstr<<aLeaf.left+1<<" "<<aLeaf.right<<" "<<bdst->levels[j].val<<" "<<"\n";
-
-//                    leaves[i] = aLeaf;
-
-//                }
-//            }
-//        }
-//    }
-
 
     for(int j = 0; j < bdst->levels.size(); j++)
     {
@@ -994,11 +824,6 @@ std::vector< std::vector<float> >  readInvariantVectors()
 // a function to train SVM
 void trainSVM()
 {
-
-    // Data for visual representation
-    int width = 512, height = 512;
-    Mat image = Mat::zeros(height, width, CV_8UC3);
-
     // Set up training data
     // float labels[4] = {1.0, 1.0, 1.0, 1.0};
     // Mat labelsMat(4, 1, CV_32FC1, labels);
@@ -1029,6 +854,47 @@ void trainSVM()
 
     qDebug()<<SVM.predict(testData,true);
 
+}
+
+float performSVM(cv::Mat trainingVector, cv::Mat testVector)
+{
+    //  Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
+    float result = 0;
+
+    //std::cout << "training vector: " << trainingVector.rows << "x" << trainingVector.cols << std::endl;
+
+    cv::transpose(trainingVector,trainingVector);
+
+    cv::transpose(testVector,testVector);
+
+    Mat labelsMat;
+
+    // Set up SVM's parameters
+    CvSVMParams params;
+    params.svm_type    = CvSVM::ONE_CLASS;
+    params.kernel_type = CvSVM::RBF;
+    params.gamma = (double)1.0/trainingVector.rows;
+    params.nu = 0.15;
+    params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8);
+
+    // Train the SVM
+    CvSVM SVM;
+
+    SVM.train(trainingVector, labelsMat, Mat(), Mat(), params);
+
+    float summ = 0;
+
+    for(int i = 0; i< testVector.rows; i++){
+        //   Mat singleTest =
+        summ+=  SVM.predict(testVector.row(i));
+    }
+
+
+    ///   cv::Scalar summ = cv::sum(resultsVector);
+
+    result = (float)summ/testVector.rows;
+
+    return result;
 }
 static inline float computeSquare (float x) { return x*x; }
 
@@ -1128,12 +994,9 @@ int performBottomUpBDSTRecognition(float tau_g, float tau_l, BDST *bdst, Place d
             std::transform(result.begin(), result.end(), result.begin(), computeSquare);
 
             // We are summing the elements of the result
-            sum_of_elems =std::accumulate(result.begin(),result.end(),0.0);//#include <numeric>
+            sum_of_elems =std::accumulate(result.begin(),result.end(),0.0);
 
             sum_of_elems = sqrt(sum_of_elems);
-
-            // We now take the square root
-            // std::transform(result.begin(), result.end(), result.begin(), (float(*)(float)) sqrt);
 
 
             // We are now collecting the difference and the indexes
@@ -1325,7 +1188,7 @@ int performTopDownBDSTRecognition(float tau_g, float tau_l, BDST *bdst, Place de
             // If it is not a terminal node, we should get the mean Invariant
             else
             {
-              /*  levelIndex--;
+                /*  levelIndex--;
                 if(levelIndex< 0) return -1;*/
 
                 for(uint j = 0; j < levelIndex; j++)
@@ -1366,7 +1229,7 @@ int performTopDownBDSTRecognition(float tau_g, float tau_l, BDST *bdst, Place de
 
             distpairs.push_back(distpair);
 
-          //  qDebug()<<"Distance result: "<<sum_of_elems<<aMember;
+            //  qDebug()<<"Distance result: "<<sum_of_elems<<aMember;
 
         }
 
@@ -1416,8 +1279,8 @@ int performTopDownBDSTRecognition(float tau_g, float tau_l, BDST *bdst, Place de
 
                 //LearnedPlace aPlace2 = dbmanager.getLearnedPlace(secondClosestMember.second+1);//dbmanager.getPlace((secondClosestMember.second+1));
 
-               // costValue = calculateCostFunctionv3(firstClosestMember.first,secondClosestMember.first,aPlace,detected_place);
-               costValue = calculateCostFunctionv2(firstClosestMember.first,secondClosestMember.first,aPlace,detected_place);
+                // costValue = calculateCostFunctionv3(firstClosestMember.first,secondClosestMember.first,aPlace,detected_place);
+                costValue = calculateCostFunctionv2(firstClosestMember.first,secondClosestMember.first,aPlace,detected_place);
             }
             else
                 //costValue =  calculateCostFunctionv3(firstClosestMember.first,secondClosestMember.first,aPlace,detected_place);
@@ -1554,46 +1417,4 @@ float calculateCostFunctionv2(float firstDistance, float secondDistance, Learned
     result = firstPart+secondPart+(1-votePercentage);
     std::cout << "result: " << result<< std::endl;
     return result;
-}
-
-float performSVM(cv::Mat trainingVector, cv::Mat testVector)
-{
-    //  Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
-    float result = 0;
-
-    //std::cout << "training vector: " << trainingVector.rows << "x" << trainingVector.cols << std::endl;
-
-    cv::transpose(trainingVector,trainingVector);
-
-    cv::transpose(testVector,testVector);
-
-    Mat labelsMat;
-
-    // Set up SVM's parameters
-    CvSVMParams params;
-    params.svm_type    = CvSVM::ONE_CLASS;
-    params.kernel_type = CvSVM::RBF;
-    params.gamma = (double)1.0/trainingVector.rows;
-    params.nu = 0.15;
-    params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8);
-
-    // Train the SVM
-    CvSVM SVM;
-
-    SVM.train(trainingVector, labelsMat, Mat(), Mat(), params);
-
-    float summ = 0;
-
-    for(int i = 0; i< testVector.rows; i++){
-        //   Mat singleTest =
-        summ+=  SVM.predict(testVector.row(i));
-    }
-
-
-    ///   cv::Scalar summ = cv::sum(resultsVector);
-
-    result = (float)summ/testVector.rows;
-
-    return result;
-
 }

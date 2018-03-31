@@ -1429,6 +1429,8 @@ If a memory error occurs, pclcluster returns NULL.
     free(mask[is]);
     data[is] = data[nnodes-inode];
     mask[is] = mask[nnodes-inode];
+
+
   
     /* Fix the distances */
     distid[is] = distid[nnodes-inode];
