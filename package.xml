@@ -3,7 +3,7 @@
   <name>create_bdst_isl</name>
   <version>0.0.0</version>
   <description>createBDSTISL</description>
-  <maintainer email="hakan.karaoguz@boun.edu.tr">Hakan Karaoguz</maintainer>
+  <maintainer email="hakan.karaoguz@boun.edu.tr">Berkan Höke</maintainer>
   <license>BSD</license>
   <url type="website">http://github.com/islboun</url>
 
