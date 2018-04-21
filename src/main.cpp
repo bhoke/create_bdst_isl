@@ -253,7 +253,6 @@ void mainFilePathCallback(std_msgs::String mainfp)
                 places.push_back(aPlace);
             }
             constructInvariantsMatrix(places);
-            performBDSTCalculations();
         }
 
     }
@@ -268,7 +267,6 @@ void mainFilePathCallback(std_msgs::String mainfp)
         qDebug() << "Place Tree file is opened";
         placeTreeStream.setDevice(&placeTreeFile);
     }
-
 }
 
 int main (int argc, char** argv)
@@ -367,7 +365,7 @@ void clusterPlace(Place pl)
         var[i] = 0.0;
     }
 
-    Node* placeTree = treecluster(nrows,ncols,data,mask,weight,1,'e','s',distmatrix);
+    Node* placeTree = treecluster(nrows,ncols,data,1,'s',distmatrix);
 
     for(int i = 0; i < ncols -1 ; ++i)
     {
@@ -418,170 +416,6 @@ void clusterPlace(Place pl)
         //        std:: cout << "------------------------------------------------------" << std::endl;
         //        std::cin.get();
     }
-}
-
-// a function to construct BDST based on place invariants
-void performBDSTCalculations()
-{
-    const int nrows = invariants.size();
-    const int ncols = invariants[0].size();
-
-    double** data = new double*[nrows];
-
-    //  int** mask = new int*[nrows];
-
-    int i;
-
-    //double** distmatrix;
-
-    for (i = 0; i < nrows; i++)
-    {
-        data[i] = new double[ncols];
-
-        //mask[i] = new int[ncols];
-    }
-
-    for(i = 0; i < nrows; i++)
-    {
-        for(int j = 0 ; j < ncols; j++)
-        {
-            data[i][j] = invariants[i][j];
-            //   qDebug()<<data[i][j];
-        }
-
-    }
-
-    // construct binary tree based on the place invariants
-    Node* binarytree = calculateBinaryBDST(nrows,ncols,data);
-
-    if(bdst)
-        bdst->deleteLater();
-
-    bdst =  new BDST;
-
-    // calculateMergedBDST(tau_h,nrows-1,nrows,binarytree,bdst);
-
-    // construct merged bdst from the contructed binary tree
-    calculateMergedBDSTv2(tau_h,nrows-1,nrows,binarytree,bdst);
-
-
-    free(binarytree);
-
-    for ( i = 0; i < nrows; i++){
-        //delete [] mask[i];
-        delete [] data[i];
-    }
-    // delete [] mask;
-    delete [] data;
-
-}
-
-double** calculateDistanceMatrix(int nrows, int ncols, double** data, int** mask,int transpose)
-/* Calculate the distance matrix between genes using the Euclidean distance. */
-{
-    int i, j;
-    double** distMatrix;
-    double* weight = NULL;
-
-    if(transpose == 0)
-    {
-        weight = new double[ncols];
-        for (i = 0; i < ncols; i++) weight[i] = 1.0;
-    }
-    else
-    {
-        weight = new double[nrows];
-        for (i = 0; i < nrows; i++) weight[i] = 1.0;
-    }
-    distMatrix = distancematrix(nrows, ncols, data, mask, weight, 'e',transpose);
-
-    if (!distMatrix)
-    {
-        printf ("Insufficient memory to store the distance matrix\n");
-        delete weight;
-        return NULL;
-    }
-    // This part is for changing the values of distMatrix to the MATLAB format. Multiply by the length of the feature vector (600) and take the sqrt
-    if(transpose == 0)
-    {
-        for(i = 0; i < nrows; i++)
-            for(j = 0; j< i; j++)
-                distMatrix[i][j] = sqrt(distMatrix[i][j]*600);
-    }
-    else
-    {
-        for(i = 0; i < ncols; i++)
-            for(j = 0; j< i; j++)
-                distMatrix[i][j] = sqrt(distMatrix[i][j]*600);
-    }
-
-    //    printf("   Place:");
-    //    for(i=0; i<nrows-1; i++) printf("%6d", i);
-    //    printf("\n");
-    //    for(i=0; i<nrows; i++)
-    //    { printf("Gene %2d:",i);
-    //        for(j=0; j<i; j++) printf(" %5.4f",distMatrix[i][j]);
-    //        printf("\n");
-    //    }
-    //    printf("\n");
-    delete weight;
-    return distMatrix;
-}
-
-Node* calculateBinaryBDST(int nrows, int ncols, double** data)
-{
-    int** mask = new int*[nrows];
-
-    double** distmatrix;
-
-    for (int i = 0; i < nrows; i++)
-    {
-
-        mask[i] = new int[ncols];
-    }
-
-
-    for(int i = 0; i < nrows; i++)
-    {
-        for(int j = 0; j < ncols; j++ )
-        {
-            mask[i][j] = 1;
-
-        }
-    }
-
-    distmatrix = calculateDistanceMatrix(nrows, ncols, data, mask,0);
-
-    //const int nnodes = nrows-1;
-
-    Node* tree;
-
-    //    printf("\n");
-    //    printf("================ Pairwise single linkage clustering ============\n");
-    /* Since we have the distance matrix here, we may as well use it. */
-    tree = treecluster(nrows, ncols, 0, 0, 0, 0, 'e', 's', distmatrix);
-    /* The distance matrix was modified by treecluster, so we cannot use it any
-       * more. But we still need to deallocate it here.
-       * The first row of distmatrix is a single null pointer; no need to free it.
-       */
-    for (int i = 1; i < nrows; i++) delete distmatrix[i];
-    delete distmatrix;
-
-    if (!tree)
-    { // Indication that the treecluster routine failed
-
-        qDebug()<<"treecluster routine failed due to insufficient memory";
-
-        return NULL;
-    }
-
-    else
-    {
-        return tree;
-    }
-
-    return NULL;
-
 }
 
 void calculateMergedBDSTv2(float tau_h, int nnodes, int noplaces, Node* tree, BDST* bdst)
