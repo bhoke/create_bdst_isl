@@ -33,9 +33,7 @@
 #include <limits.h>
 #include <string.h>
 #include "cluster.h"
-
-
-/* ************************************************************************ */
+#include <stdio.h>
 
 static const double* sortdata = NULL; /* used in the quicksort algorithm */
 
@@ -180,7 +178,6 @@ the shortest distance.
             if (temp < distance)
             {
                 distance = temp;
-//                printf("In ward_closest(): nr = %d, ns = %d , wardCoeff = %f \n", nr , ns, wardCoeff);
                 *ip = i;
                 *jp = j;
             }
@@ -663,7 +660,6 @@ If a memory error occurs, pclcluster returns NULL.
     { /* Find the pair with the shortest distance */
         int is = 1;
         int js = 0;
-        printf("Node %d: \n",-inode - 1);
         result[inode].distance = ward_closest(nelements-inode, distmatrix, &is, &js,count);
         result[inode].left = distid[js];
         result[inode].right = distid[is];

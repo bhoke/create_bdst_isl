@@ -6,17 +6,6 @@
 #include <QVector>
 
 
-
-class TreeLeaf
-{
-public:
-    int left;
-    int right;
-    float val;
-    int parentConnection;
-    bool isused;
-};
-
 class BDST : public QObject
 {
     Q_OBJECT
