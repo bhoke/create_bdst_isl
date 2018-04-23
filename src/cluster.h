@@ -6,7 +6,7 @@
  * Human Genome Center, Institute of Medical Science, University of Tokyo,
  * 4-6-1 Shirokanedai, Minato-ku, Tokyo 108-8639, Japan.
  * Contact: mdehoon 'AT' gsc.riken.jp
- * 
+ *
  * Permission to use, copy, modify, and distribute this software and its
  * documentation with or without modifications and for any purpose and
  * without fee is hereby granted, provided that any copyright notices
@@ -15,7 +15,7 @@
  * names of the contributors or copyright holders not be used in
  * advertising or publicity pertaining to distribution of the software
  * without specific prior permission.
- * 
+ *
  * THE CONTRIBUTORS AND COPYRIGHT HOLDERS OF THIS SOFTWARE DISCLAIM ALL
  * WARRANTIES WITH REGARD TO THIS SOFTWARE, INCLUDING ALL IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS, IN NO EVENT SHALL THE
@@ -24,7 +24,7 @@
  * OF USE, DATA OR PROFITS, WHETHER IN AN ACTION OF CONTRACT, NEGLIGENCE
  * OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE
  * OR PERFORMANCE OF THIS SOFTWARE.
- * 
+ *
  */
 
 #ifndef min
@@ -45,10 +45,10 @@ double clusterdistance (int nrows, int ncolumns, double** data, int** mask,
   double weight[], int n1, int n2, int index1[], int index2[], char dist,
   char method, int transpose);
 double** distancematrix (int ngenes, int ndata, double** data,
-  int** mask, double* weight, char dist, int transpose);
+  int transpose);
 
 /* Chapter 4 */
-typedef struct {int left; int right; double distance;} Node;
+typedef struct {int left; int right; double distance;} treeNode;
 /*
  * A Node struct describes a single node in a tree created by hierarchical
  * clustering. The tree can be represented by an array of n Node structs,
@@ -59,9 +59,8 @@ typedef struct {int left; int right; double distance;} Node;
  * between the two subnodes that were joined.
  */
 
-Node* treecluster (int nrows, int ncolumns, double** data, int** mask,
-  double weight[], int transpose, char dist, char method, double** distmatrix);
-void cuttree (int nelements, Node* tree, int nclusters, int clusterid[]);
+treeNode* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix);
+void cuttree (int nelements, treeNode* tree, int nclusters, int clusterid[]);
 
 /* Utility routines, currently undocumented */
 void sort(int n, const double data[], int index[]);

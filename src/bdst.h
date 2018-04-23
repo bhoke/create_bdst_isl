@@ -2,24 +2,16 @@
 #define BDST_H
 
 #include "Utility.h"
+#include <QObject>
 #include <QVector>
 
-class TreeLeaf
+
+class BDST : public QObject
 {
+    Q_OBJECT
 public:
-    int left;
-    int right;
-    float val;
-    int parentConnection;
-    bool isused;
+    BDST(QObject *parent = 0);
+
 };
 
-class BDST
-{
-public:
-    BDST();
-    ~BDST();
-    QList<Level> levels;
-};
-
-#endif
+#endif // BDST_H
