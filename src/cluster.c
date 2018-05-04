@@ -571,8 +571,7 @@ If a memory error occurs, pclcluster returns NULL.
 
 /* ******************************************************************** */
 
-static
-treeNode* wards (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
+static treeNode* wards (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
 
 /*
 

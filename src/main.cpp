@@ -82,7 +82,6 @@ DatabaseManager dbmanager,knowledgedbmanager;
 QString mainFilePath;
 
 double tau_h, tau_r;
-int tau_l;
 
 QFile file;
 QTextStream strm;
@@ -174,20 +173,17 @@ int main (int argc, char** argv)
     ros::NodeHandle pnh("~");
 
     tau_h = 0;
-    tau_r = 1.4;
     tau_r = 2.5;
 
     // get recognition parameters
     pnh.getParam("tau_h",tau_h);
     pnh.getParam("tau_r",tau_r);
-    pnh.getParam("tau_l",tau_l);
-    qDebug()<<"Parameters: "<<tau_h<<tau_r<<tau_l;
+    qDebug()<<"Parameters: "<<tau_h<<tau_r;
 
     ros::Subscriber sbc = nh.subscribe<std_msgs::Int16>("placeDetectionISL/placeID",5, placeCallback);
     ros::Subscriber filepathsubscriber = nh.subscribe<std_msgs::String>("placeDetectionISL/mainFilePath",2,mainFilePathCallback);
 
     ros::Rate loop(50);
-
     while(ros::ok())
     {
         ros::spinOnce();
@@ -198,13 +194,11 @@ int main (int argc, char** argv)
             // int result= performBottomUpBDSTRecognition(tau_r,tau_l,bdst,currentPlace); //performTopDownBDSTRecognition(1.25,2,bdst,currentPlace);
 
             // if recognized, result is the recognized place id, if -1, the place is not recongized.
-
             if(result < 0) // No recognition case
             {
                 // convert current place to a learned one and update the topological map
                 // add learned place to whole places and create tree
             }
-
             else //Recognition case
             {
                 // We should just update the place that new place belongs to
@@ -226,6 +220,17 @@ int main (int argc, char** argv)
 
 }
 
+double* nodeDiff(treeNode *tn,int nnodes)
+{
+    double *result = new double[nnodes];
+    for(int i = 0; i < nnodes; i++)
+    {
+        result[i] = tn[i+1].distance - tn[i].distance;
+    }
+
+    return result;
+}
+
 //Function which clusters a single place into subplaces
 void clusterPlace(Place pl)
 {
@@ -243,12 +248,14 @@ void clusterPlace(Place pl)
         }
 
         treeNode* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
+
         int clusterCount = 2; //TODO: clusterCount will be selected automatically by Ward's method
         cuttree(ncols,placeTree,clusterCount,clusterid);
+        double *differences = nodeDiff(placeTree,ncols-2);
         std::cout << "placeTree for place ID " << pl.id << ": " << std::endl;
         for (int i = 0; i < ncols - 1 ; i++)
-            std::cout << placeTree[i].left << "\t" << placeTree[i].right <<
-                         " belongs to cluster " << clusterid[i] <<  std::endl;
+            std::cout << placeTree[i].left << "\t" << placeTree[i].right << "\t"
+                      << placeTree[i].distance << "\t" << differences[i] << std::endl;
 
         delete []clusterid;
 }
