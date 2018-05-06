@@ -390,29 +390,35 @@ error occured, all elements in clusterid are set to -1.
     const int n = nelements-nclusters; /* number of treeNodes to join */
     int* treeNodeid;
     for (i = nelements-2; i >= n; i--)
-    { k = tree[i].left;
+    {
+      k = tree[i].left;
         if (k>=0)
-        { clusterid[k] = icluster;
-            icluster++;
+        {
+          clusterid[k] = icluster;
+          icluster++;
         }
         k = tree[i].right;
         if (k>=0)
-        { clusterid[k] = icluster;
-            icluster++;
+        {
+          clusterid[k] = icluster;
+          icluster++;
         }
     }
     treeNodeid = malloc(n*sizeof(int));
     if(!treeNodeid)
-    { for (i = 0; i < nelements; i++) clusterid[i] = -1;
-        return;
+    {
+      for (i = 0; i < nelements; i++) clusterid[i] = -1;
+      return;
     }
     for (i = 0; i < n; i++) treeNodeid[i] = -1;
     for (i = n-1; i >= 0; i--)
-    { if(treeNodeid[i]<0)
-        { j = icluster;
-            treeNodeid[i] = j;
-            icluster++;
-        }
+    {
+      if(treeNodeid[i]<0)
+      {
+        j = icluster;
+        treeNodeid[i] = j;
+        icluster++;
+      }
         else j = treeNodeid[i];
         k = tree[i].left;
         if (k<0) treeNodeid[-k-1] = j; else clusterid[k] = j;
