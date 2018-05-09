@@ -246,7 +246,7 @@ void clusterPlace(Place pl)
         }
 
         Node* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
-
+	int clusterCount = 2;
         cuttree(ncols,placeTree,clusterCount,clusterid);
         std::cout << "placeTree for place ID " << pl.id << ": " << std::endl;
         for (int i = 0; i < ncols - 1 ; i++)
