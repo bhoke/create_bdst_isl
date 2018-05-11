@@ -1,4 +1,5 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.4.6)
+SET(CMAKE_CXX_STANDARD 11)
 
 PROJECT(create_bdst_isl)
 
@@ -27,15 +28,21 @@ set(bubble_space_SOURCES
 	${main_directory}/bubble/bubbleprocess.cpp
  	${main_directory}/database/databasemanager.cpp
 	${main_directory}/imageprocess/imageprocess.cpp
-	${main_directory}/Utility.cpp
+  ${main_directory}/Utility/Place.cpp
+  ${main_directory}/Utility/BasePoint.cpp
+  ${main_directory}/Utility/PlaceDetector.cpp
+  ${main_directory}/Utility/TemporalWindow.cpp
 	src/cluster.c
 )
 
-SET(bubble_space_HEADERS 
+SET(bubble_space_HEADERS
  	${main_directory}/bubble/bubbleprocess.h
  	${main_directory}/database/databasemanager.h
  	${main_directory}/imageprocess/imageprocess.h
- 	${main_directory}/Utility.h
+  ${main_directory}/Utility/Place.h
+  ${main_directory}/Utility/BasePoint.h
+  ${main_directory}/Utility/PlaceDetector.h
+  ${main_directory}/Utility/TemporalWindow.h
 	src/cluster.h
 )
 
@@ -59,8 +66,8 @@ TARGET_LINK_LIBRARIES(${PROJECT_NAME}
  opencv_ml
  ${catkin_LIBRARIES})
 
-ADD_EXECUTABLE(create_bdst_isl_node 
-src/main.cpp 
+ADD_EXECUTABLE(create_bdst_isl_node
+src/main.cpp
 ${bubble_space_SOURCES}
  ${bubble_space_HEADERS}
 )

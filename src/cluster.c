@@ -45,12 +45,12 @@ int compare(const void* a, const void* b)
  * sort, which is not allowed under ANSI C.
  */
 { const int i1 = *(const int*)a;
-    const int i2 = *(const int*)b;
-    const double term1 = sortdata[i1];
-    const double term2 = sortdata[i2];
-    if (term1 < term2) return -1;
-    if (term1 > term2) return +1;
-    return 0;
+  const int i2 = *(const int*)b;
+  const double term1 = sortdata[i1];
+  const double term2 = sortdata[i2];
+  if (term1 < term2) return -1;
+  if (term1 > term2) return +1;
+  return 0;
 }
 
 /* ---------------------------------------------------------------------- */
@@ -61,11 +61,10 @@ void sort(int n, const double data[], int index[])
  * is unchanged.
  */
 { int i;
-    sortdata = data;
-    for (i = 0; i < n; i++) index[i] = i;
-    qsort(index, n, sizeof(int), compare);
+  sortdata = data;
+  for (i = 0; i < n; i++) index[i] = i;
+  qsort(index, n, sizeof(int), compare);
 }
-
 
 /* ---------------------------------------------------------------------- */
 
@@ -85,12 +84,12 @@ makedatamask(int nrows, int ncols, double*** pdata)
 static void
 freedatamask(int n, double** data, int** mask)
 { int i;
-    for (i = 0; i < n; i++)
-    { free(mask[i]);
-        free(data[i]);
-    }
-    free(mask);
-    free(data);
+  for (i = 0; i < n; i++)
+  { free(mask[i]);
+    free(data[i]);
+  }
+  free(mask);
+  free(data);
 }
 
 /* ---------------------------------------------------------------------- */
@@ -118,24 +117,24 @@ A pointer to the integer that is to receive the second index of the pair with
 the shortest distance.
 */
 { int i, j;
-    double temp;
-    double distance = distmatrix[1][0];
-    *ip = 1;
-    *jp = 0;
-    for (i = 1; i < n; i++)
-    { for (j = 0; j < i; j++)
-        { temp = distmatrix[i][j];
-            if (temp<distance)
-            { distance = temp;
-                *ip = i;
-                *jp = j;
-            }
-        }
+  double temp;
+  double distance = distmatrix[1][0];
+  *ip = 1;
+  *jp = 0;
+  for (i = 1; i < n; i++)
+  { for (j = 0; j < i; j++)
+    { temp = distmatrix[i][j];
+      if (temp<distance)
+      { distance = temp;
+        *ip = i;
+        *jp = j;
+      }
     }
-    return distance;
+  }
+  return distance;
 }
 
-/* ---------------------------------------------------------------------- */
+/* ********************************************************************* */
 
 static
 double ward_closest(int n, double** distmatrix, int* ip, int* jp,int* count)
@@ -238,14 +237,16 @@ Otherwise, the distance between two columns in the matrix is calculated.
 { double result = 0.;
     int i;
     if (transpose==0) /* Calculate the distance between two rows */
-    { for (i = 0; i < n; i++)
+    { 
+	for (i = 0; i < n; i++)
         {
             double term = data[index1][i] - data[index2][i];
             result += term*term;
         }
     }
     else
-    { for (i = 0; i < n; i++)
+    { 
+	for (i = 0; i < n; i++)
         {
             double term = data[i][index1] - data[i][index2];
             result += term*term;
@@ -319,41 +320,39 @@ when microarrays are being clustered.
 ========================================================================
 */
 { /* First determine the size of the distance matrix */
-    const int n = (transpose==0) ? nrows : ncolumns;
-    const int ndata = (transpose==0) ? ncolumns : nrows;
-    int i,j;
-    double** matrix;
+  const int n = (transpose==0) ? nrows : ncolumns;
+  const int ndata = (transpose==0) ? ncolumns : nrows;
+  int i,j;
+  double** matrix;
 
-    /* Set the metric function as indicated by dist */
+  if (n < 2) return NULL;
 
-    if (n < 2) return NULL;
-
-    /* Set up the ragged array */
-    matrix = malloc(n*sizeof(double*));
-    if(matrix==NULL) return NULL; /* Not enough memory available */
-    matrix[0] = NULL;
-    /* The zeroth row has zero columns. We allocate it anyway for convenience.*/
-    for (i = 1; i < n; i++)
-    { matrix[i] = malloc(i*sizeof(double));
-        if (matrix[i]==NULL) break; /* Not enough memory available */
-    }
-    if (i < n) /* break condition encountered */
-    { j = i;
-        for (i = 1; i < j; i++) free(matrix[i]);
-        return NULL;
-    }
+  /* Set up the ragged array */
+  matrix = malloc(n*sizeof(double*));
+  if(matrix==NULL) return NULL; /* Not enough memory available */
+  matrix[0] = NULL;
+  /* The zeroth row has zero columns. We allocate it anyway for convenience.*/
+  for (i = 1; i < n; i++)
+  { matrix[i] = malloc(i*sizeof(double));
+    if (matrix[i]==NULL) break; /* Not enough memory available */
+  }
+  if (i < n) /* break condition encountered */
+  { j = i;
+    for (i = 1; i < j; i++) free(matrix[i]);
+    return NULL;
+  }
 
     /* Calculate the distances and save them in the ragged array */
     for (i = 1; i < n; i++)
         for (j = 0; j < i; j++)
             matrix[i][j]=euclid(ndata,data,i,j,transpose);
 
-    return matrix;
+  return matrix;
 }
 
 /* ******************************************************************** */
 
-void cuttree (int nelements, Node* tree, int nclusters, int clusterid[])
+void cuttree (int nelements, treeNode* tree, int nclusters, int clusterid[])
 
 /*
 Purpose
@@ -369,10 +368,10 @@ Arguments
 nelements      (input) int
 The number of elements that were clustered.
 
-tree           (input) Node[nelements-1]
-The clustering solution. Each node in the array describes one linking event,
+tree           (input) treeNode[nelements-1]
+The clustering solution. Each treeNode in the array describes one linking event,
 with tree[i].left and tree[i].right representig the elements that were joined.
-The original elements are numbered 0..nelements-1, nodes are numbered
+The original elements are numbered 0..nelements-1, treeNodes are numbered
 -1..-(nelements-1).
 
 nclusters      (input) int
@@ -387,46 +386,52 @@ error occured, all elements in clusterid are set to -1.
 */
 { int i, j, k;
     int icluster = 0;
-    const int n = nelements-nclusters; /* number of nodes to join */
-    int* nodeid;
+    const int n = nelements-nclusters; /* number of treeNodes to join */
+    int* treeNodeid;
     for (i = nelements-2; i >= n; i--)
-    { k = tree[i].left;
+    {
+      k = tree[i].left;
         if (k>=0)
-        { clusterid[k] = icluster;
-            icluster++;
+        {
+          clusterid[k] = icluster;
+          icluster++;
         }
         k = tree[i].right;
         if (k>=0)
-        { clusterid[k] = icluster;
-            icluster++;
+        {
+          clusterid[k] = icluster;
+          icluster++;
         }
     }
-    nodeid = malloc(n*sizeof(int));
-    if(!nodeid)
-    { for (i = 0; i < nelements; i++) clusterid[i] = -1;
-        return;
+    treeNodeid = malloc(n*sizeof(int));
+    if(!treeNodeid)
+    {
+      for (i = 0; i < nelements; i++) clusterid[i] = -1;
+      return;
     }
-    for (i = 0; i < n; i++) nodeid[i] = -1;
+    for (i = 0; i < n; i++) treeNodeid[i] = -1;
     for (i = n-1; i >= 0; i--)
-    { if(nodeid[i]<0)
-        { j = icluster;
-            nodeid[i] = j;
-            icluster++;
-        }
-        else j = nodeid[i];
+    {
+      if(treeNodeid[i]<0)
+      {
+        j = icluster;
+        treeNodeid[i] = j;
+        icluster++;
+      }
+        else j = treeNodeid[i];
         k = tree[i].left;
-        if (k<0) nodeid[-k-1] = j; else clusterid[k] = j;
+        if (k<0) treeNodeid[-k-1] = j; else clusterid[k] = j;
         k = tree[i].right;
-        if (k<0) nodeid[-k-1] = j; else clusterid[k] = j;
+        if (k<0) treeNodeid[-k-1] = j; else clusterid[k] = j;
     }
-    free(nodeid);
+    free(treeNodeid);
     return;
 }
 
 /* ******************************************************************** */
 
 static
-Node* pclcluster (int nrows, int ncolumns, double** data,double** distmatrix, int transpose)
+treeNode* pclcluster (int nrows, int ncolumns, double** data,double** distmatrix, int transpose)
 
 /*
 
@@ -484,28 +489,27 @@ does not deallocate it.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, pclcluster returns NULL.
 ========================================================================
 */
 { int i, j;
     const int nelements = (transpose==0) ? nrows : ncolumns;
-    int inode;
+    int itreeNode;
     const int ndata = transpose ? nrows : ncolumns;
-    const int nnodes = nelements - 1;
+    const int ntreeNodes = nelements - 1;
 
-    /* Set the metric function as indicated by dist */
 
-    Node* result;
+    treeNode* result;
     double** newdata;
     int* level;
     int* distid = malloc(nelements*sizeof(int));
     if(!distid) return NULL;
-    result = malloc(nnodes*sizeof(Node));
+    result = malloc(ntreeNodes*sizeof(treeNode));
     if(!result)
     { free(distid);
         return NULL;
@@ -514,7 +518,7 @@ If a memory error occurs, pclcluster returns NULL.
     for (i = 0; i < nelements; i++) distid[i] = i;
     /* To remember which row/column in the distance matrix contains what */
 
-    /* Storage for node data */
+    /* Storage for treeNode data */
     if (transpose)
     { for (i = 0; i < nelements; i++)
             for (j = 0; j < ndata; j++)
@@ -527,15 +531,15 @@ If a memory error occurs, pclcluster returns NULL.
         data = newdata;
     }
 
-    for (inode = 0; inode < nnodes; inode++)
+    for (itreeNode = 0; itreeNode < ntreeNodes; itreeNode++)
     { /* Find the pair with the shortest distance */
         int is = 1;
         int js = 0;
-        result[inode].distance = find_closest_pair(nelements-inode, distmatrix, &is, &js);
-        result[inode].left = distid[js];
-        result[inode].right = distid[is];
+        result[itreeNode].distance = find_closest_pair(nelements-itreeNode, distmatrix, &is, &js);
+        result[itreeNode].left = distid[js];
+        result[itreeNode].right = distid[is];
 
-        /* Make node js the new node */
+        /* Make treeNode js the new treeNode */
         for (i = 0; i < ndata; i++)
         {
             data[js][i] = data[js][i]*level[js] + data[is][i]*level[is];
@@ -543,20 +547,20 @@ If a memory error occurs, pclcluster returns NULL.
             data[js][i] /= level[js];
         }
         free(data[is]);
-        data[is] = data[nnodes-inode];
-        level[is] = level[nnodes-inode];
+        data[is] = data[ntreeNodes-itreeNode];
+        level[is] = level[ntreeNodes-itreeNode];
 
         /* Fix the distances */
-        distid[is] = distid[nnodes-inode];
+        distid[is] = distid[ntreeNodes-itreeNode];
         for (i = 0; i < is; i++)
-            distmatrix[is][i] = distmatrix[nnodes-inode][i];
-        for (i = is + 1; i < nnodes-inode; i++)
-            distmatrix[i][is] = distmatrix[nnodes-inode][i];
+            distmatrix[is][i] = distmatrix[ntreeNodes-itreeNode][i];
+        for (i = is + 1; i < ntreeNodes-itreeNode; i++)
+            distmatrix[i][is] = distmatrix[ntreeNodes-itreeNode][i];
 
-        distid[js] = -inode-1;
+        distid[js] = -itreeNode-1;
         for (i = 0; i < js; i++)
             distmatrix[js][i] = euclid(ndata,data,js,i,0);
-        for (i = js + 1; i < nnodes-inode; i++)
+        for (i = js + 1; i < ntreeNodes-itreeNode; i++)
             distmatrix[i][js] = euclid(ndata,data,js,i,0);
     }
 
@@ -571,8 +575,7 @@ If a memory error occurs, pclcluster returns NULL.
 
 /* ******************************************************************** */
 
-static
-Node* wards (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
+static treeNode* wards (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
 
 /*
 
@@ -608,10 +611,10 @@ does not deallocate it.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, pclcluster returns NULL.
 ========================================================================
@@ -619,16 +622,16 @@ If a memory error occurs, pclcluster returns NULL.
 {
     int i, j;
     const int nelements = (transpose==0) ? nrows : ncolumns;
-    int inode;
+    int itreeNode;
     const int ndata = transpose ? nrows : ncolumns;
-    const int nnodes = nelements - 1;
+    const int ntreeNodes = nelements - 1;
 
-    Node* result;
+    treeNode* result;
     double** newdata;
     int * count = malloc(nelements*sizeof(int));
     int* distid = malloc(nelements*sizeof(int));
     if(!distid) return NULL;
-    result = malloc(nnodes*sizeof(Node));
+    result = malloc(ntreeNodes*sizeof(treeNode));
     if(!result)
     {
         free(distid);
@@ -643,7 +646,7 @@ If a memory error occurs, pclcluster returns NULL.
         count[i] = 1;
     }
 
-    /* Storage for node data */
+    /* Storage for treeNode data */
     if (transpose)
     { for (i = 0; i < nelements; i++)
             for (j = 0; j < ndata; j++)
@@ -656,14 +659,14 @@ If a memory error occurs, pclcluster returns NULL.
         data = newdata;
     }
 
-    for (inode = 0; inode < nnodes; inode++)
+    for (itreeNode = 0; itreeNode < ntreeNodes; itreeNode++)
     { /* Find the pair with the shortest distance */
         int is = 1;
         int js = 0;
-        result[inode].distance = ward_closest(nelements-inode, distmatrix, &is, &js,count);
-        result[inode].left = distid[js];
-        result[inode].right = distid[is];
-        /* Make node js the new node */
+        result[itreeNode].distance = ward_closest(nelements-itreeNode, distmatrix, &is, &js,count);
+        result[itreeNode].left = distid[js];
+        result[itreeNode].right = distid[is];
+        /* Make treeNode js the new treeNode */
         for (i = 0; i < ndata; i++)
         {
             data[js][i] = data[js][i]*count[js] + data[is][i]*count[is];
@@ -671,20 +674,20 @@ If a memory error occurs, pclcluster returns NULL.
         }
         count[js] += count[is];
         free(data[is]);
-        data[is] = data[nnodes-inode];
-        count[is] = count[nnodes - inode];
+        data[is] = data[ntreeNodes-itreeNode];
+        count[is] = count[ntreeNodes - itreeNode];
 
         /* Fix the distances */
-        distid[is] = distid[nnodes-inode];
+        distid[is] = distid[ntreeNodes-itreeNode];
         for (i = 0; i < is; i++)
-            distmatrix[is][i] = distmatrix[nnodes-inode][i];
-        for (i = is + 1; i < nnodes-inode; i++)
-            distmatrix[i][is] = distmatrix[nnodes-inode][i];
+            distmatrix[is][i] = distmatrix[ntreeNodes-itreeNode][i];
+        for (i = is + 1; i < ntreeNodes-itreeNode; i++)
+            distmatrix[i][is] = distmatrix[ntreeNodes-itreeNode][i];
 
-        distid[js] = -inode-1;
+        distid[js] = -itreeNode-1;
         for (i = 0; i < js; i++)
             distmatrix[js][i] = euclid(ndata,data,js,i,0);
-        for (i = js + 1; i < nnodes-inode; i++)
+        for (i = js + 1; i < ntreeNodes-itreeNode; i++)
             distmatrix[i][js] = euclid(ndata,data,js,i,0);
     }
 
@@ -700,12 +703,12 @@ If a memory error occurs, pclcluster returns NULL.
 /* ******************************************************************** */
 
 static
-int nodecompare(const void* a, const void* b)
+int treeNodecompare(const void* a, const void* b)
 /* Helper function for qsort. */
-{ const Node* node1 = (const Node*)a;
-    const Node* node2 = (const Node*)b;
-    const double term1 = node1->distance;
-    const double term2 = node2->distance;
+{ const treeNode* treeNode1 = (const treeNode*)a;
+    const treeNode* treeNode2 = (const treeNode*)b;
+    const double term1 = treeNode1->distance;
+    const double term2 = treeNode2->distance;
     if (term1 < term2) return -1;
     if (term1 > term2) return +1;
     return 0;
@@ -714,7 +717,7 @@ int nodecompare(const void* a, const void* b)
 /* ---------------------------------------------------------------------- */
 
 static
-Node* pslcluster (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
+treeNode* pslcluster (int nrows, int ncolumns, double** data, double** distmatrix, int transpose)
 
 /*
 
@@ -786,10 +789,10 @@ and are therefore ignored.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, pslcluster returns NULL.
 
@@ -797,25 +800,25 @@ If a memory error occurs, pslcluster returns NULL.
 */
 { int i, j, k;
     const int nelements = transpose ? ncolumns : nrows;
-    const int nnodes = nelements - 1;
+    const int ntreeNodes = nelements - 1;
     int* vector;
     double* temp;
     int* index;
-    Node* result;
-    temp = malloc(nnodes*sizeof(double));
+    treeNode* result;
+    temp = malloc(ntreeNodes*sizeof(double));
     if(!temp) return NULL;
     index = malloc(nelements*sizeof(int));
     if(!index)
     { free(temp);
         return NULL;
     }
-    vector = malloc(nnodes*sizeof(int));
+    vector = malloc(ntreeNodes*sizeof(int));
     if(!vector)
     { free(index);
         free(temp);
         return NULL;
     }
-    result = malloc(nelements*sizeof(Node));
+    result = malloc(nelements*sizeof(treeNode));
     if(!result)
     { free(vector);
         free(index);
@@ -823,7 +826,7 @@ If a memory error occurs, pslcluster returns NULL.
         return NULL;
     }
 
-    for (i = 0; i < nnodes; i++) vector[i] = i;
+    for (i = 0; i < ntreeNodes; i++) vector[i] = i;
 
     if(distmatrix)
     { for (i = 0; i < nrows; i++)
@@ -867,11 +870,11 @@ If a memory error occurs, pslcluster returns NULL.
     }
     free(temp);
 
-    for (i = 0; i < nnodes; i++) result[i].left = i;
-    qsort(result, nnodes, sizeof(Node), nodecompare);
+    for (i = 0; i < ntreeNodes; i++) result[i].left = i;
+    qsort(result, ntreeNodes, sizeof(treeNode), treeNodecompare);
 
     for (i = 0; i < nelements; i++) index[i] = i;
-    for (i = 0; i < nnodes; i++)
+    for (i = 0; i < ntreeNodes; i++)
     { j = result[i].left;
         k = vector[j];
         result[i].left = index[j];
@@ -881,13 +884,13 @@ If a memory error occurs, pslcluster returns NULL.
     free(vector);
     free(index);
 
-    result = realloc(result, nnodes*sizeof(Node));
+    result = realloc(result, ntreeNodes*sizeof(treeNode));
 
     return result;
 }
 /* ******************************************************************** */
 
-static Node* pmlcluster (int nelements, double** distmatrix)
+static treeNode* pmlcluster (int nelements, double** distmatrix)
 /*
 
 Purpose
@@ -910,10 +913,10 @@ zero. The distance matrix will be modified by this routine.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, pmlcluster returns NULL.
 ========================================================================
@@ -921,11 +924,11 @@ If a memory error occurs, pmlcluster returns NULL.
 { int j;
     int n;
     int* clusterid;
-    Node* result;
+    treeNode* result;
 
     clusterid = malloc(nelements*sizeof(int));
     if(!clusterid) return NULL;
-    result = malloc((nelements-1)*sizeof(Node));
+    result = malloc((nelements-1)*sizeof(treeNode));
     if (!result)
     { free(clusterid);
         return NULL;
@@ -963,7 +966,7 @@ If a memory error occurs, pmlcluster returns NULL.
 
 /* ******************************************************************* */
 
-static Node* palcluster (int nelements, double** distmatrix)
+static treeNode* palcluster (int nelements, double** distmatrix)
 /*
 Purpose
 =======
@@ -985,10 +988,10 @@ zero. The distance matrix will be modified by this routine.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, palcluster returns NULL.
 ========================================================================
@@ -997,7 +1000,7 @@ If a memory error occurs, palcluster returns NULL.
     int n;
     int* clusterid;
     int* number;
-    Node* result;
+    treeNode* result;
 
     clusterid = malloc(nelements*sizeof(int));
     if(!clusterid) return NULL;
@@ -1006,7 +1009,7 @@ If a memory error occurs, palcluster returns NULL.
     { free(clusterid);
         return NULL;
     }
-    result = malloc((nelements-1)*sizeof(Node));
+    result = malloc((nelements-1)*sizeof(treeNode));
     if (!result)
     { free(clusterid);
         free(number);
@@ -1068,7 +1071,7 @@ If a memory error occurs, palcluster returns NULL.
 
 /* ******************************************************************* */
 
-Node* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix)
+treeNode* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix)
 /*
 Purpose
 =======
@@ -1120,16 +1123,16 @@ routine should deallocate the distance matrix after the return from treecluster.
 Return value
 ============
 
-A pointer to a newly allocated array of Node structs, describing the
-hierarchical clustering solution consisting of nelements-1 nodes. Depending on
+A pointer to a newly allocated array of treeNode structs, describing the
+hierarchical clustering solution consisting of nelements-1 treeNodes. Depending on
 whether genes (rows) or microarrays (columns) were clustered, nelements is
-equal to nrows or ncolumns. See src/cluster.h for a description of the Node
+equal to nrows or ncolumns. See src/cluster.h for a description of the treeNode
 structure.
 If a memory error occurs, treecluster returns NULL.
 
 ========================================================================
 */
-{ Node* result = NULL;
+{ treeNode* result = NULL;
     const int nelements = (transpose==0) ? nrows : ncolumns;
     const int ldistmatrix = (distmatrix==NULL && method!='s') ? 1 : 0;
     if (nelements < 2) return NULL;

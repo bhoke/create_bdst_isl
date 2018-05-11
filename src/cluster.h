@@ -48,7 +48,7 @@ double** distancematrix (int ngenes, int ndata, double** data,
   int transpose);
 
 /* Chapter 4 */
-typedef struct {int left; int right; double distance;} Node;
+typedef struct {int left; int right; double distance;} treeNode;
 /*
  * A Node struct describes a single node in a tree created by hierarchical
  * clustering. The tree can be represented by an array of n Node structs,
@@ -59,12 +59,10 @@ typedef struct {int left; int right; double distance;} Node;
  * between the two subnodes that were joined.
  */
 
-Node* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix);
-void cuttree (int nelements, Node* tree, int nclusters, int clusterid[]);
+treeNode* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix);
+void cuttree (int nelements, treeNode* tree, int nclusters, int clusterid[]);
 
 /* Utility routines, currently undocumented */
 void sort(int n, const double data[], int index[]);
 double mean(int n, double x[]);
 double median (int n, double x[]);
-
-

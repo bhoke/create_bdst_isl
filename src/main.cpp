@@ -1,9 +1,7 @@
 #include "bubble/bubbleprocess.h"
+#include "Utility/PlaceDetector.h"
 #include "imageprocess/imageprocess.h"
 #include "database/databasemanager.h"
-#include "bdst.h"
-#include "Utility.h"
-
 #include <opencv2/ml/ml.hpp>
 
 #include <ros/ros.h>
@@ -54,9 +52,6 @@ std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
 // Clusters a single place into different sub-places
 void clusterPlace(Place pl);
 
-// Train the SVM classifier
-void trainSVM();
-
 // Perform the one-Class SVM calculation
 float performSVM(cv::Mat trainingVector, cv::Mat testVector);
 
@@ -85,7 +80,6 @@ DatabaseManager dbmanager,knowledgedbmanager;
 QString mainFilePath;
 
 double tau_h, tau_r;
-int tau_l;
 
 QFile file;
 QTextStream strm;
@@ -95,6 +89,7 @@ QTextStream placeTreeStream;
 // Callback function for place detection. The input is the place id signal from the place detection node
 void placeCallback(std_msgs::Int16 placeId)
 {
+    // read the place from the database
     Place aPlace = dbmanager.getPlace((int)placeId.data);
     clusterPlace(aPlace);
 
@@ -107,6 +102,8 @@ void placeCallback(std_msgs::Int16 placeId)
     }
 
     currentPlaces.push_back(aPlace);
+    performRecognition = true;
+
 }
 
 
@@ -177,14 +174,12 @@ int main (int argc, char** argv)
     ros::NodeHandle pnh("~");
 
     tau_h = 0;
-    tau_r = 1.4;
     tau_r = 2.5;
 
     // get recognition parameters
     pnh.getParam("tau_h",tau_h);
     pnh.getParam("tau_r",tau_r);
-    pnh.getParam("tau_l",tau_l);
-    qDebug()<<"Parameters: "<<tau_h<<tau_r<<tau_l;
+    qDebug()<<"Parameters: "<<tau_h<<tau_r;
 
     ros::Subscriber sbc = nh.subscribe<std_msgs::Int16>("placeDetectionISL/placeID",5, placeCallback);
     ros::Subscriber filepathsubscriber = nh.subscribe<std_msgs::String>("placeDetectionISL/mainFilePath",2,mainFilePathCallback);
@@ -193,6 +188,7 @@ int main (int argc, char** argv)
 
     while(ros::ok())
     {
+
         ros::spinOnce();
         if(learnedPlaces.size() >= MIN_NO_PLACES)
         {
@@ -213,6 +209,7 @@ int main (int argc, char** argv)
                 // We should just update the place that new place belongs to
                 // The topological map will not be updated only the last node should be updated
             }
+
         }
 
         loop.sleep();
@@ -229,6 +226,17 @@ int main (int argc, char** argv)
 
 }
 
+double* nodeDiff(treeNode *tn,int nnodes)
+{
+    double *result = new double[nnodes];
+    for(int i = nnodes; i > 0; i--)
+    {
+        result[nnodes - i] = tn[i].distance - tn[i -1].distance;
+    }
+
+    return result;
+}
+
 //Function which clusters a single place into subplaces
 void clusterPlace(Place pl)
 {
@@ -239,144 +247,26 @@ void clusterPlace(Place pl)
         int *clusterid = new int[ncols];
 
         std::cout << nrows << "   " << ncols << std::endl;
-        for(int i = 0; i < nrows; ++i){
+        for(int i = 0; i < nrows; ++i)
+        {
             data[i] = new double[ncols];
             for (int j = 0; j < ncols; ++j)
                 data[i][j] = currentInvariants.at<float>(i,j);
         }
 
-        Node* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
-	int clusterCount = 2;
+        treeNode* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
+        double *differences = nodeDiff(placeTree,ncols-2);
+        int clusterCount = 1 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
         cuttree(ncols,placeTree,clusterCount,clusterid);
+
         std::cout << "placeTree for place ID " << pl.id << ": " << std::endl;
         for (int i = 0; i < ncols - 1 ; i++)
-            std::cout << placeTree[i].left << "\t" << placeTree[i].right <<
-                         " belongs to cluster " << clusterid[i] <<  std::endl;
+            std::cout << placeTree[i].left << "\t" << placeTree[i].right << "\t"
+                      << placeTree[i].distance << "\t" << differences[i] << std::endl;
 
         delete []clusterid;
 }
-/*void clusterPlace(Place pl)
-//{
-//    Mat currentInvariants = pl.memberInvariants;
-//    int nrows = currentInvariants.rows;
-//    int ncols = currentInvariants.cols;
-//    std::cout << ncols << std::endl;
-
-//    cv::Mat sum[ncols-1],treeMean[ncols-1];
-//    double var[ncols],sumSq[ncols];
-//    int level[ncols];
-//    double **data = new double*[nrows];
-//    double **distmatrix;
-//    int **mask = new int*[nrows];
-//    double weight[nrows];
-
-//    for(int i = 0; i < nrows; ++i){
-//        mask[i] = new int[ncols];
-//        data[i] = new double[ncols];
-//        weight[i] = 1.0;
-//        for (int j = 0; j < ncols; ++j)
-//        {
-//            mask[i][j] = 1;
-//            data[i][j] = currentInvariants.at<float>(i,j);
-//        }
-//    }
-
-//    for (int i= 0 ; i < ncols - 1; ++i)
-//    {
-//        treeMean[i] = cv::Mat::zeros(nrows,1,CV_64F);
-//        sum[i]  = cv::Mat::zeros(nrows,1,CV_64F);
-//        sumSq[i]  = 0.0;
-//        level[i] = 0;
-//        var[i] = 0.0;
-//    }
-
-//    Node* placeTree = treecluster(nrows,ncols,data,1,'s',distmatrix);
-
-//    for(int i = 0; i < ncols -1 ; ++i)
-//    {
-//        //        std::cout << "Node " << -i-1 << "\t";
-//        int k = placeTree[i].left;
-//        std::cout << k << "\t";
-//        cv::Mat curInv,sqrInv;
-//        if (k < 0)
-//        {
-//            sum[i] += sum[-k-1];
-//            sumSq[i] += sumSq[-k-1];
-//            level[i] += level[-k-1];
-//        }
-//        else
-//        {
-//            ++level[i];
-//            curInv = currentInvariants.col(k).clone();
-//            curInv.convertTo(curInv,CV_64F);
-//            sum[i] += curInv;
-//            cv::mulTransposed(curInv,sqrInv,true);
-//            sumSq[i] += sqrInv.at<double>(0,0);
-//        }
-//        int j = placeTree[i].right;
-//        std::cout << j << "\t" << placeTree[i].distance << std::endl;
-//        if (j < 0)
-//        {
-//            sum[i] += sum[-j-1];
-//            sumSq[i] += sumSq[-j-1];
-//            level[i] += level[-j-1];
-//        }
-//        else
-//        {
-//            ++level[i];
-//            curInv = currentInvariants.col(j).clone();
-//            curInv.convertTo(curInv,CV_64F);
-//            sum[i] += curInv;
-//            cv::mulTransposed(curInv,sqrInv,true);
-//            sumSq[i] += sqrInv.at<double>(0,0);
-//        }
-//        treeMean[i] = sum[i]/level[i];
-//        cv::Mat meanSq;
-//        cv::mulTransposed(treeMean[i],meanSq,true);
-//        var[i] = sumSq[i] / level[i] - meanSq.at<double>(0,0);
-//    }
-}*/
 static inline float computeSquare (float x) { return x*x; }
-float performSVM(cv::Mat trainingVector, cv::Mat testVector)
-{
-    //  Mat trainingDataMat(4, 2, CV_32FC1, trainingData);
-    float result = 0;
-
-    //std::cout << "training vector: " << trainingVector.rows << "x" << trainingVector.cols << std::endl;
-
-    cv::transpose(trainingVector,trainingVector);
-
-    cv::transpose(testVector,testVector);
-
-    Mat labelsMat;
-
-    // Set up SVM's parameters
-    CvSVMParams params;
-    params.svm_type    = CvSVM::ONE_CLASS;
-    params.kernel_type = CvSVM::RBF;
-    params.gamma = (double)1.0/trainingVector.rows;
-    params.nu = 0.15;
-    params.term_crit   = cvTermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8);
-
-    // Train the SVM
-    CvSVM SVM;
-
-    SVM.train(trainingVector, labelsMat, Mat(), Mat(), params);
-
-    float summ = 0;
-
-    for(int i = 0; i< testVector.rows; i++){
-        //   Mat singleTest =
-        summ+=  SVM.predict(testVector.row(i));
-    }
-
-
-    ///   cv::Scalar summ = cv::sum(resultsVector);
-
-    result = (float)summ/testVector.rows;
-
-    return result;
-}
 float calculateCostFunctionv2(float firstDistance, float secondDistance, LearnedPlace closestPlace, Place detected_place)
 {
 
