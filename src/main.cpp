@@ -60,9 +60,6 @@ float calculateCostFunctionv2(float firstDistance, float secondDistance, Learned
 // Calculate the mean invariants so that the robot can perform recognition
 void calculateMeanInvariantsOfBDST();
 
-int performTopDownBDSTRecognition(float tau_g, float tau_l, BDST* bdst, Place detected_place);
-int performBottomUpBDSTRecognition(float tau_g, float tau_l, BDST* bdst, Place detected_place);
-
 // OPENCV modifikasyonu
 double compareHistHK( InputArray _H1, InputArray _H2, int method );
 

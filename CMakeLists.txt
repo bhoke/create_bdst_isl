@@ -1,4 +1,4 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.4.6)
+CMAKE_MINIMUM_REQUIRED(VERSION 2.8.3)
 SET(CMAKE_CXX_STANDARD 11)
 
 PROJECT(create_bdst_isl)
@@ -19,6 +19,7 @@ add_definitions( ${QT_DEFINITIONS} )
 SET(QT_LIBS Qt4::QtCore Qt4::QtSql)
 ENDIF()
 
+FIND_PACKAGE( OpenCV REQUIRED )
 SET(main_directory ~/catkin_ws/src/place_detection_isl/src)
 
 INCLUDE_DIRECTORIES(~/catkin_ws/src/place_detection_isl/src)
@@ -28,10 +29,10 @@ set(bubble_space_SOURCES
 	${main_directory}/bubble/bubbleprocess.cpp
  	${main_directory}/database/databasemanager.cpp
 	${main_directory}/imageprocess/imageprocess.cpp
-  ${main_directory}/Utility/Place.cpp
-  ${main_directory}/Utility/BasePoint.cpp
-  ${main_directory}/Utility/PlaceDetector.cpp
-  ${main_directory}/Utility/TemporalWindow.cpp
+  	${main_directory}/Utility/Place.cpp
+  	${main_directory}/Utility/BasePoint.cpp
+  	${main_directory}/Utility/PlaceDetector.cpp
+  	${main_directory}/Utility/TemporalWindow.cpp
 	src/cluster.c
 )
 
@@ -39,14 +40,12 @@ SET(bubble_space_HEADERS
  	${main_directory}/bubble/bubbleprocess.h
  	${main_directory}/database/databasemanager.h
  	${main_directory}/imageprocess/imageprocess.h
-  ${main_directory}/Utility/Place.h
-  ${main_directory}/Utility/BasePoint.h
-  ${main_directory}/Utility/PlaceDetector.h
-  ${main_directory}/Utility/TemporalWindow.h
+  	${main_directory}/Utility/Place.h
+  	${main_directory}/Utility/BasePoint.h
+  	${main_directory}/Utility/PlaceDetector.h
+  	${main_directory}/Utility/TemporalWindow.h
 	src/cluster.h
 )
-
-FIND_PACKAGE( OpenCV REQUIRED )
 
 CATKIN_PACKAGE()
 
