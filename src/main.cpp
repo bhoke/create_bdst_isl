@@ -53,7 +53,7 @@ std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
 void clusterPlace(Place pl);
 
 // Perform the one-Class SVM calculation
-float performSVM(cv::Mat trainingVector, cv::Mat testVector);
+//float performSVM(cv::Mat trainingVector, cv::Mat testVector);
 
 float calculateCostFunctionv2(float firstDistance, float secondDistance, LearnedPlace closestPlace, Place detected_place);
 
@@ -99,10 +99,7 @@ void placeCallback(std_msgs::Int16 placeId)
     }
 
     currentPlaces.push_back(aPlace);
-    performRecognition = true;
-
 }
-
 
 // A callback function for the main file, the input is main file path string from the place detection node
 void mainFilePathCallback(std_msgs::String mainfp)
@@ -277,9 +274,7 @@ float calculateCostFunctionv2(float firstDistance, float secondDistance, Learned
     //  {
     // Place aPlace = DatabaseManager::getPlace(closestPlace.id);
 
-    // for KNN results performKNN function can be used, now SVM classification is used
-    //votePercentage= performKNN(closestPlace.memberInvariants, secondClosestPlace.memberInvariants, detected_place.memberInvariants);
-    votePercentage = performSVM(closestPlace.memberInvariants,detected_place.memberInvariants);
+    //votePercentage = performSVM(closestPlace.memberInvariants,detected_place.memberInvariants);
 
     qDebug()<<"Vote percentage"<<votePercentage;
 
