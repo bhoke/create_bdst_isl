@@ -69,24 +69,16 @@ std::vector<LearnedPlace> learnedPlaces;
 std::vector<Place> currentPlaces;
 
 int learnedPlaceCounter = 1;
-
 Place currentPlace;
-
 DatabaseManager dbmanager,knowledgedbmanager;
-
 QString mainFilePath;
-
 double tau_h, tau_r;
-
-QFile file;
-QTextStream strm;
-QFile placeTreeFile;
-QTextStream placeTreeStream;
 
 // Callback function for place detection. The input is the place id signal from the place detection node
 void placeCallback(std_msgs::Int16 placeId)
 {
     // read the place from the database
+    std::cout << "Place Callback Received" << std::endl;
     Place aPlace = dbmanager.getPlace((int)placeId.data);
     clusterPlace(aPlace);
 
@@ -94,7 +86,7 @@ void placeCallback(std_msgs::Int16 placeId)
     {
         LearnedPlace alearnedPlace(aPlace);
         learnedPlaces.push_back(alearnedPlace);
-        std::cout <<"Places size = "<<learnedPlaces.size() << " < " << MIN_NO_PLACES << " No Recognition" << endl;
+        std::cout <<"Places size = "<< learnedPlaces.size() << " < " << MIN_NO_PLACES << " --> No Recognition" << std::endl;
         return;
     }
 
@@ -104,26 +96,15 @@ void placeCallback(std_msgs::Int16 placeId)
 // A callback function for the main file, the input is main file path string from the place detection node
 void mainFilePathCallback(std_msgs::String mainfp)
 {
-    std::string tempstr = mainfp.data;
-
-    mainFilePath = QString::fromStdString(tempstr);
-
-    qDebug()<<"Main File Path Callback received"<<mainFilePath;
-
-    QString detected_places_dbpath = mainFilePath;
-
-    detected_places_dbpath.append("/detected_places.db");
-
-    QString knowledge_dbpath = mainFilePath;
-
-    knowledge_dbpath.append("/knowledge.db");
+    mainFilePath = QString::fromStdString(mainfp.data);
+    qDebug()<<"Main File Path Callback received" << mainFilePath;
+    QString detected_places_dbpath = mainFilePath + "/detected_places.db";
+    QString knowledge_dbpath = mainFilePath + "/knowledge.db";
 
     if(dbmanager.openDB(detected_places_dbpath))
     {
         qDebug()<<"Places db opened";
     }
-    // if usePreviousMemory is true in place detection, it constructs previous place invariants and perform bdst calculations
-    // the recognition will be based on the previous knowledge
     if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
     {
         qDebug()<<"Knowledge db opened";
@@ -134,32 +115,22 @@ void mainFilePathCallback(std_msgs::String mainfp)
         }
         else
         {
-            int previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
+            // int previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
 
-            qDebug()<<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize;
+            // qDebug()<<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize;
 
-            LearnedPlace::lpCounter = previousKnowledgeSize+1;
-
-            for (int i = 1; i <= previousKnowledgeSize; i++)
-            {
-                LearnedPlace aPlace = knowledgedbmanager.getLearnedPlace(i);
-
-                learnedPlaces.push_back(aPlace);
-            }
+    //         LearnedPlace::lpCounter = previousKnowledgeSize+1;
+    //
+    //         for (int i = 1; i <= previousKnowledgeSize; i++)
+    //         {
+    //             LearnedPlace aPlace = knowledgedbmanager.getLearnedPlace(i);
+    //
+    //             learnedPlaces.push_back(aPlace);
+    //         }
         }
     }
-
-    QString placeTreeFileName = mainFilePath;
-    placeTreeFileName = placeTreeFileName.append("/placeTree.txt");
-
-    placeTreeFile.setFileName(placeTreeFileName);
-
-    if(placeTreeFile.open(QFile::WriteOnly))
-    {
-        qDebug() << "Place Tree file is opened";
-        placeTreeStream.setDevice(&placeTreeFile);
-    }
 }
+
 int main (int argc, char** argv)
 {
     // Initialize ROS
@@ -175,49 +146,41 @@ int main (int argc, char** argv)
     pnh.getParam("tau_r",tau_r);
     qDebug()<<"Parameters: "<<tau_h<<tau_r;
 
-    ros::Subscriber sbc = nh.subscribe<std_msgs::Int16>("placeDetectionISL/placeID",5, placeCallback);
-    ros::Subscriber filepathsubscriber = nh.subscribe<std_msgs::String>("placeDetectionISL/mainFilePath",2,mainFilePathCallback);
-
+    ros::Subscriber plIDSubscriber = nh.subscribe<std_msgs::Int16>("placeDetectionISL/placeID",5, placeCallback);
+    ros::Subscriber filePathSubscriber = nh.subscribe<std_msgs::String>("placeDetectionISL/mainFilePath",2,mainFilePathCallback);
+    //
     ros::Rate loop(50);
-
+    //
     while(ros::ok())
     {
-
         ros::spinOnce();
-        if(learnedPlaces.size() >= MIN_NO_PLACES)
-        {
-            // Perform Top Down BDST recognition to recognize the current place, to use Bottom up recognition use performBottomUpBDSTRecognition function
-            int result = -1;//performTopDownBDSTRecognition(tau_r,tau_l,bdst,currentPlace);
-            // int result= performBottomUpBDSTRecognition(tau_r,tau_l,bdst,currentPlace); //performTopDownBDSTRecognition(1.25,2,bdst,currentPlace);
-
-            // if recognized, result is the recognized place id, if -1, the place is not recongized.
-
-            if(result < 0) // No recognition case
-            {
-                // convert current place to a learned one and update the topological map
-                // add learned place to whole places and create tree
-            }
-
-            else //Recognition case
-            {
-                // We should just update the place that new place belongs to
-                // The topological map will not be updated only the last node should be updated
-            }
-
-        }
-
         loop.sleep();
+        // if(learnedPlaces.size() >= MIN_NO_PLACES)
+        // {
+    //         // Perform Top Down BDST recognition to recognize the current place, to use Bottom up recognition use performBottomUpBDSTRecognition function
+            int result = -1;//performTopDownBDSTRecognition(tau_r,tau_l,bdst,currentPlace);
+    //         // int result= performBottomUpBDSTRecognition(tau_r,tau_l,bdst,currentPlace); //performTopDownBDSTRecognition(1.25,2,bdst,currentPlace);
+    //
+    //         // if recognized, result is the recognized place id, if -1, the place is not recongized.
+    //
+            // if(result < 0) // No recognition case
+            // {
+    //             // convert current place to a learned one and update the topological map
+    //             // add learned place to whole places and create tree
+            // }
+    //
+            // else //Recognition case
+            // {
+    //             // We should just update the place that new place belongs to
+    //             // The topological map will not be updated only the last node should be updated
+            // }
+    //
+        // }
     }
-
-    file.close();
+    //
     dbmanager.closeDB();
 
-    ros::shutdown();
-
-    qDebug()<< "Close place tree File ";
-    placeTreeFile.close();
     return 0;
-
 }
 
 double* nodeDiff(treeNode *tn,int nnodes)
@@ -237,8 +200,8 @@ void clusterPlace(Place pl)
         Mat currentInvariants = pl.memberInvariants;
         int nrows = currentInvariants.rows;
         int ncols = currentInvariants.cols;
-        double **data = new double*[nrows];
-        int *clusterid = new int[ncols];
+        double** data = new double*[nrows];
+        int* clusterid = new int[ncols];
 
         std::cout << nrows << "   " << ncols << std::endl;
         for(int i = 0; i < nrows; ++i)
@@ -250,16 +213,25 @@ void clusterPlace(Place pl)
 
         treeNode* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
         double *differences = nodeDiff(placeTree,ncols-2);
-        int clusterCount = 1 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
-        cuttree(ncols,placeTree,clusterCount,clusterid);
+        int clusterCount = 2 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
+        std::cout <<"Cluster Count is: "<<  clusterCount << std::endl;
+        int* subPlaces[clusterCount];
+        int* count = new int[clusterCount];
+        cuttree(ncols,placeTree,clusterCount,clusterid,subPlaces,count);
+
+        for (int i = 0; i < clusterCount; i++)
+        for (int j = 0; j < count[i]; j++)
+        printf("I love subplace I love very subplace[%d][%d]: %d \n", i,j, subPlaces[i][j]);
 
         std::cout << "placeTree for place ID " << pl.id << ": " << std::endl;
         for (int i = 0; i < ncols - 1 ; i++)
             std::cout << placeTree[i].left << "\t" << placeTree[i].right << "\t"
-                      << placeTree[i].distance << "\t" << differences[i] << std::endl;
+                      << placeTree[i].distance << "\t" << std::endl;
+        
 
         delete []clusterid;
 }
+
 static inline float computeSquare (float x) { return x*x; }
 float calculateCostFunctionv2(float firstDistance, float secondDistance, LearnedPlace closestPlace, Place detected_place)
 {

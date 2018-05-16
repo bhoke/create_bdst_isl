@@ -60,7 +60,7 @@ typedef struct {int left; int right; double distance;} treeNode;
  */
 
 treeNode* treecluster (int nrows, int ncolumns, double** data, int transpose, char method, double **distmatrix);
-void cuttree (int nelements, treeNode* tree, int nclusters, int clusterid[]);
+void cuttree (int nelements, treeNode* tree, int nclusters, int clusterid[],int* subPlaces[],int count[]);
 
 /* Utility routines, currently undocumented */
 void sort(int n, const double data[], int index[]);
