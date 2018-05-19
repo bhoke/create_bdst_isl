@@ -28,27 +28,6 @@ extern "C" {
 
 #define MIN_NO_PLACES 3
 
-// A typedef for sorting places based on their distance and index
-typedef std::pair<float,int> mypair;
-
-// Comparator function for sorting
-bool comparator ( const mypair& l, const mypair& r)
-{ return l.first < r.first; }
-
-// Addition operator for std::vector
-template <typename T>
-std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
-{
-    assert(a.size() == b.size());
-
-    std::vector<T> result;
-    result.reserve(a.size());
-
-    std::transform(a.begin(), a.end(), b.begin(),
-                   std::back_inserter(result), std::plus<T>());
-    return result;
-}
-
 // Clusters a single place into different sub-places
 void clusterPlace(Place pl);
 
@@ -115,18 +94,18 @@ void mainFilePathCallback(std_msgs::String mainfp)
         }
         else
         {
-            // int previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
+            int previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
 
-            // qDebug()<<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize;
+            qDebug()<<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize;
 
-    //         LearnedPlace::lpCounter = previousKnowledgeSize+1;
-    //
-    //         for (int i = 1; i <= previousKnowledgeSize; i++)
-    //         {
-    //             LearnedPlace aPlace = knowledgedbmanager.getLearnedPlace(i);
-    //
-    //             learnedPlaces.push_back(aPlace);
-    //         }
+            LearnedPlace::lpCounter = previousKnowledgeSize+1;
+
+            for (int i = 1; i <= previousKnowledgeSize; i++)
+            {
+                LearnedPlace aPlace = knowledgedbmanager.getLearnedPlace(i);
+
+                learnedPlaces.push_back(aPlace);
+            }
         }
     }
 }
@@ -177,6 +156,7 @@ int main (int argc, char** argv)
     //
         // }
     }
+
     //
     dbmanager.closeDB();
 
@@ -215,24 +195,33 @@ void clusterPlace(Place pl)
         double *differences = nodeDiff(placeTree,ncols-2);
         int clusterCount = 2 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
         std::cout <<"Cluster Count is: "<<  clusterCount << std::endl;
-        int* subPlaces[clusterCount];
+        int* placeClusters[clusterCount];
         int* count = new int[clusterCount];
-        cuttree(ncols,placeTree,clusterCount,clusterid,subPlaces,count);
+        cuttree(ncols,placeTree,clusterCount,clusterid,placeClusters,count);
+        std::vector <subPlace> currentSPs;
 
-        for (int i = 0; i < clusterCount; i++)
-        for (int j = 0; j < count[i]; j++)
-        printf("I love subplace I love very subplace[%d][%d]: %d \n", i,j, subPlaces[i][j]);
+        std::cout << "Cols = " << pl.memberInvariants.cols << " Rows = " << pl.memberInvariants.rows << std::endl ;
 
+        for (int i = 0; i < clusterCount; i++){
+          subPlace temp_sp;
+          int k = 0;
+          for (int j = 0; j < count[i]; j++){
+            temp_sp.memberInvariants = cv::Mat::zeros(HARMONIC1 * HARMONIC2 * 5,count[i], CV_64F);
+            pl.memberInvariants.col(placeClusters[i][j]).copyTo(temp_sp.memberInvariants.col(k));
+            k++;
+          }
+          temp_sp.calculateMeanInvariant();
+        }
         std::cout << "placeTree for place ID " << pl.id << ": " << std::endl;
         for (int i = 0; i < ncols - 1 ; i++)
             std::cout << placeTree[i].left << "\t" << placeTree[i].right << "\t"
                       << placeTree[i].distance << "\t" << std::endl;
-        
 
         delete []clusterid;
 }
 
 static inline float computeSquare (float x) { return x*x; }
+
 float calculateCostFunctionv2(float firstDistance, float secondDistance, LearnedPlace closestPlace, Place detected_place)
 {
 
