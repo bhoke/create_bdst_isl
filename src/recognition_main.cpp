@@ -13,8 +13,6 @@
 #include <stdio.h>
 #include <stdlib.h>  /* The standard C libraries */
 
-#define MIN_NO_PLACES 3
-
 void clusterPlace(Place pl); // Clusters a single place into different sub-places
 float calculateCostFunctionv2(float firstDistance, float secondDistance, LearnedPlace closestPlace, Place detected_place);
 void addNode();
@@ -38,7 +36,7 @@ int main (int argc, char** argv)
   tau_h = 0;
   tau_r = 2.5;
 
-  std::cout <<"Parameters: "<<tau_h<<tau_r << std::endl;
+  std::cout <<"Parameters: "<<tau_h << "  "<<tau_r << std::endl;
 
   PlaceRecognizer PR;
 
@@ -48,24 +46,11 @@ int main (int argc, char** argv)
   {
     ros::spinOnce();
     loop.sleep();
-    if(learnedPlaces.size() >= MIN_NO_PLACES){
-      int result = -1;
-      // TODO: Perform recognition here
-      // if recognized, result is the recognized place id, if -1, the place is not recongized.
-
-      if(result < 0) { // No recognition case
-        //TODO: No recognition case -- Convert current place to a learned one
-      }
-
-      else{
-        //TODO: Recognition case -- Update the corresponding learnedPlace
-      }
-    }
-    else {
-      PR.learnCurrentPlace();
-    }
-  }
-
+  } // while(ros::ok())
+  std::vector< treeNode> tree = PR.PT.generatePlaceDendrogram();
+  for (int i = 0; i < tree.size() -1; i ++)
+  std::cout << tree[i].left << "   " << tree[i].right << "    " <<  tree[i].distance << std::endl;
+  PR.closeDatabases();
   return 0;
 }
 

@@ -34,6 +34,7 @@ set(bubble_space_SOURCES
   ${main_directory}/Utility/TemporalWindow.cpp
   src/PlaceRecognizer.cpp
   src/PlaceDivider.cpp
+  src/PlaceTree.cpp
   src/cluster.c
 )
 
@@ -47,6 +48,7 @@ SET(bubble_space_HEADERS
   ${main_directory}/Utility/TemporalWindow.h
   src/PlaceRecognizer.h
   src/PlaceDivider.h
+  src/PlaceTree.h
   src/cluster.h
 )
 

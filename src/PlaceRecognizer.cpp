@@ -1,8 +1,8 @@
 #include "PlaceRecognizer.h"
 
+PlaceRecognizer::PlaceRecognizer() : PT(0){
 
-PlaceRecognizer::PlaceRecognizer(){
-
+  PT = PlaceTree(0);
   this -> plIDSubscriber = this->nh.subscribe<std_msgs::Int16>
   ("placeDetectionISL/placeID", 5, &PlaceRecognizer::placeCallback, this);
 
@@ -13,10 +13,19 @@ PlaceRecognizer::PlaceRecognizer(){
 void PlaceRecognizer::placeCallback(std_msgs::Int16 placeId){
   // Callback function for place detection.
   // The input is the place id signal from the place detection node
-
+  int recognized = 0;
   std::cout << "Place Callback Received" << std::endl;
-  this-> currentPlace = dbmanager.getPlace((int)placeId.data);
-  PlaceDivider::clusterPlace(this->currentPlace);
+  currentPlace = dbmanager.getPlace((int)placeId.data);
+  //PlaceDivider::clusterPlace(this->currentPlace);
+  int lpCount = learnedPlaces.size();
+  if (lpCount < MIN_NO_PLACES) {
+    learnCurrentPlace();
+  }
+  else {
+    recognized = recognizeCurrentPlace();
+    if (recognized > 0) updateTree();
+    else learnCurrentPlace();
+  }
 }
 
 void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
@@ -57,66 +66,25 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
   } // if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
 }
 
-void PlaceRecognizer::learnCurrentPlace(currentPlace){
-  LearnedPlace alearnedPlace(currentPlace);
-  this->learnedPlaces.push_back(currentPlace);
-  std::cout <<"Places size = "<< learnedPlaces.size() << " < " << MIN_NO_PLACES << " --> No Recognition" << std::endl;
-  detectedPlaces.push_back(currentPlace);
-}
-
-treeNode* PlaceRecognizer::generatePlaceDendrogram(int* phi,double* lambda,int totalPlaceCount){
-  int i,j,k;
-  treeNode* tree;
-  tree = new treeNode[totalPlaceCount];
-  int* index = new int[totalPlaceCount];
-
-  for(i = 0; i< totalPlaceCount;i++){
-    tree[i].left = i;
-    tree[i].right = phi[i];
-    tree[i].distance = lambda[i];
-    index[i] = i;
-  }
-
-  qsort(tree,totalPlaceCount,sizeof(treeNode),nodecompare);
-
-  for (i = 0; i < totalPlaceCount; i++) {
-    j = tree[i].left; // j is the node sorted in ascending distance order
-    k = phi[j]; // phi [j] is the first node which left node connects to
-    tree[i].left = index[j];
-    tree[i].right = index[k];
-    index[k] = -i-1;
-  }
-
-  return tree;
-}
-
-void addNode(double* distNewNode,int placeCount, int* phi,double* lambda)
-{
-  phi[placeCount] = placeCount;
-  lambda[placeCount] = DBL_MAX;
-  for (int i = 0; i < placeCount; i++)
-  if (lambda[i] >= distNewNode[i])
-  {
-    if (lambda[i] <= distNewNode[phi[i]])
-    distNewNode[phi[i]] = lambda[i];
-    lambda[i] = distNewNode[i];
-    phi[i] = placeCount;
-  }
-  else if (distNewNode[i] < distNewNode[phi[i]])
-  distNewNode[phi[i]] = distNewNode[i];
-
-  for (int i = 0;i < placeCount;i++)
-  if(lambda[i] >= lambda[phi[i]])
-  phi[i] = placeCount;
-}
-
-static int nodecompare(const void* a, const void* b)
-/* Helper function for qsort. */
-{ const treeNode* node1 = (const treeNode*)a;
-  const treeNode* node2 = (const treeNode*)b;
-  const double term1 = node1->distance;
-  const double term2 = node2->distance;
-  if (term1 < term2) return -1;
-  if (term1 > term2) return +1;
+int PlaceRecognizer::recognizeCurrentPlace(){
+  std::cout << "I am in recognizeCurrentPlace()" << std::endl;
   return 0;
+}
+
+void PlaceRecognizer::updateTree(){
+  std::cout << "I am in updateTree()" << std::endl;
+}
+
+void PlaceRecognizer::learnCurrentPlace(){
+  LearnedPlace alearnedPlace(this->currentPlace);
+  this->learnedPlaces.push_back(alearnedPlace);
+  std::cout <<"Place "<< this -> learnedPlaces.back().id << " is learned!" << std::endl;
+  knowledgedbmanager.insertLearnedPlace(alearnedPlace);
+  PT.addNode(currentPlace.meanInvariant);
+}
+
+void PlaceRecognizer::closeDatabases() {
+  this->knowledgedbmanager.closeDB();
+  this->dbmanager.closeDB();
+  std::cout << "Databases are closed!!" << std::endl;
 }
