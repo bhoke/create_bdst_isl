@@ -1,3 +1,6 @@
+#ifndef PLACETREE_H
+#define PLACETREE_H
+
 #include "PlaceDivider.h"
 
 class PlaceTree {
@@ -13,3 +16,4 @@ private:
   int placeCount;
   std::vector<cv::Mat> allInvariantMeans;
 };
+#endif

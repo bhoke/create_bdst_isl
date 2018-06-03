@@ -1,3 +1,6 @@
+#ifndef PLACERECOGNIZER_H
+#define PLACERECOGNIZER_H
+
 #include <ros/ros.h>
 #include <std_msgs/String.h>
 #include <sensor_msgs/Image.h>
@@ -37,3 +40,4 @@ public:
   void closeDatabases();
   PlaceTree PT;
 };
+#endif

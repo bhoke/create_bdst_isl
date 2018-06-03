@@ -15,10 +15,11 @@ bool nodecompare(treeNode node1, treeNode node2){
 std::vector<treeNode> PlaceTree::generatePlaceDendrogram(){
   int i,j,k;
   std::vector<treeNode> tree;
-  int *index = new int[placeCount];
+  int nodeCount = placeCount - 1;
+  int* index = new int[nodeCount];
   treeNode tn;
 
-  for(i = 0; i< placeCount;i++){
+  for(i = 0; i < nodeCount;i++){
     tn.left = i;
     tn.right = phi[i];
     tn.distance = lambda[i];
@@ -28,14 +29,13 @@ std::vector<treeNode> PlaceTree::generatePlaceDendrogram(){
 
   std::sort(tree.begin(),tree.end(),nodecompare);
 
-  for (i = 0; i < placeCount; i++) {
+  for (i = 0; i < nodeCount; i++) {
     j = tree[i].left; // j is the node sorted in ascending distance order
     k = phi[j]; // phi [j] is the first node which left node connects to
     tree[i].left = index[j];
     tree[i].right = index[k];
     index[k] = -i-1;
   }
-
   delete []index;
   return tree;
 }

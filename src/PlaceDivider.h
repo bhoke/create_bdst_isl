@@ -1,3 +1,6 @@
+#ifndef PLACEDIVIDER_H
+#define PLACEDIVIDER_H
+
 #include "Utility/Place.h"
 #include "bubble/bubbleprocess.h"
 
@@ -11,3 +14,4 @@ public:
 private:
   PlaceDivider(){};
 };
+#endif
