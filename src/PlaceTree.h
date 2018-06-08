@@ -9,6 +9,8 @@ public:
   PlaceTree(int placeCount);
   std::vector<treeNode> generatePlaceDendrogram();
   void addNode(cv::Mat currentPlaceMean);
+  std::vector<int> levels;
+  std::vector<cv::Mat> nodeMeans;
 
 private:
   std::vector<int> phi;

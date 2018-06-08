@@ -48,7 +48,7 @@ int main (int argc, char** argv)
     loop.sleep();
   } // while(ros::ok())
   std::vector< treeNode> tree = PR.PT.generatePlaceDendrogram();
-  for (int i = 0; i < tree.size(); i ++)
+  for (int i = 0; i < tree.size() - 1; i ++)
   std::cout << tree[i].left << "   " << tree[i].right << "    " <<  tree[i].distance << std::endl;
   PR.closeDatabases();
   return 0;
