@@ -4,7 +4,7 @@
 
 PlaceTree::PlaceTree(int plCount)
 {
-  this->placeCount = plCount;
+  placeCount = plCount;
 }
 
 bool nodecompare(treeNode node1, treeNode node2){
@@ -12,44 +12,66 @@ bool nodecompare(treeNode node1, treeNode node2){
   return node1.distance < node2.distance;
 }
 
-std::vector<treeNode> PlaceTree::generatePlaceDendrogram(){
-  int i,j,k;
-  std::vector<treeNode> tree;
+void PlaceTree::generatePlaceDendrogram(){
+  int j,k;
   int nodeCount = placeCount - 1;
+  nodeMembers.clear();
+  nodeMeans.clear();
+  tree.clear();
+  levels.clear();
   int* index = new int[placeCount];
-  int* tempLevel = new int[placeCount];
-  cv::Mat* tempMeans = new cv::Mat[placeCount];
   treeNode tn;
-
-  for(i = 0; i < placeCount;i++){
+  nodeMembers.resize((size_t)nodeCount);
+  levels.resize((size_t)nodeCount);
+  nodeMeans.resize((size_t)nodeCount);
+  cv::Size invariantSize = allInvariantMeans[0].size();
+  std::fill(nodeMeans.begin(), nodeMeans.end(),cv::Mat::zeros(invariantSize,CV_32FC1));
+  for(int i = 0; i < placeCount;i++){
     tn.left = i;
     tn.right = phi[i];
     tn.distance = lambda[i];
     tree.push_back(tn);
     index[i] = i;
-    tempLevel[i] = 1;
-    tempMeans[i] = this-> allInvariantMeans[i];
-    std::cout << allInvariantMeans[i] << std::endl;
   }
 
   std::sort(tree.begin(),tree.end(),nodecompare);
-
-  for (i = 0; i < nodeCount; i++) {
+  std::cout<< "Node #\tLeft\tRight\tNumel" << std::endl;
+  for (int i = 0; i < nodeCount; i++) {
     j = tree[i].left; // j is the node sorted in ascending distance order
     k = phi[j]; // phi [j] is the first node which left node connects to
     tree[i].left = index[j];
     tree[i].right = index[k];
+    int leftLevel = 0,rightLevel = 0;
+    if(index[j] < 0 ){
+      leftLevel = levels[-index[j] - 1];
+      nodeMembers[i].reserve(nodeMembers[i].size() + nodeMembers[-index[j] -1].size());
+      nodeMembers[i].insert(nodeMembers[i].end(), nodeMembers[-index[j] -1 ].begin(), nodeMembers[-index[j] -1].end());
+      nodeMeans[i] += nodeMeans[-index[j] -1] * levels[-index[j] -1];
+    }
+    else{
+      leftLevel ++;
+      nodeMembers[i].push_back(index[j]);
+      nodeMeans[i] += allInvariantMeans[index[j]];
+    }
+    if(index[k] < 0){
+      rightLevel = levels[-index[k] - 1];
+      nodeMembers[i].reserve(nodeMembers[i].size() + nodeMembers[-index[k] - 1].size());
+      nodeMembers[i].insert(nodeMembers[i].end(), nodeMembers[-index[k] -1].begin(), nodeMembers[-index[k] -1].end());
+      nodeMeans[i] += nodeMeans[-index[k] -1] * levels[-index[k] -1];
+    }
+    else{
+      rightLevel++;
+      nodeMembers[i].push_back(index[k]);
+      nodeMeans[i] += allInvariantMeans[index[k]];
+    }
+    levels[i] = leftLevel + rightLevel;
+    nodeMeans[i] = nodeMeans[i] / levels[i];
     index[k] = -i-1;
-    //tempMeans[k] = tempMeans[k] * (float)tempLevel[k] + tempMeans[j] * (float)tempLevel[j];
-    nodeMeans.push_back(tempMeans[k]);
-    tempLevel[k] += tempLevel[j];
-    levels.push_back(tempLevel[k]);
+    std::cout<< -i-1 <<"\t" << tree[i].left << "\t" << tree[i].right<< "\t"
+    << levels[i] << "\t" << std::endl;
   }
 
-  delete []tempMeans;
   delete []index;
-  delete []tempLevel;
-  return tree;
 }
 
 void PlaceTree::addNode(cv::Mat currentPlaceMean)
@@ -74,8 +96,6 @@ void PlaceTree::addNode(cv::Mat currentPlaceMean)
   if(lambda[i] >= lambda[phi[i]])
   phi[i] = placeCount;
 
-  for(int i = 0; i < placeCount; i ++) std::cout << "phi: " << phi[i]<< std::endl;
-  std::cout << "PlaceCount before increment" << placeCount << std::endl;
   placeCount++; //Place count is set to N+1
   std::cout << "We have " << placeCount << " places" << std::endl;
   allInvariantMeans.push_back(currentPlaceMean);

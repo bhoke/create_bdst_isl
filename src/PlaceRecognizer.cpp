@@ -1,6 +1,6 @@
 #include "PlaceRecognizer.h"
 
-PlaceRecognizer::PlaceRecognizer() : PT(0){
+PlaceRecognizer::PlaceRecognizer(float tau_r) : PT(0){
 
   PT = PlaceTree(0);
   this -> plIDSubscriber = this->nh.subscribe<std_msgs::Int16>
@@ -8,22 +8,31 @@ PlaceRecognizer::PlaceRecognizer() : PT(0){
 
   this -> filePathSubscriber = this->nh.subscribe<std_msgs::String>
   ("placeDetectionISL/mainFilePath",2, &PlaceRecognizer::mainFilePathCallback,this);
+
+  this->svm = cv::ml::SVM::create();
+  this->svm->setType(cv::ml::SVM::ONE_CLASS);
+  this->svm->setKernel(cv::ml::SVM::LINEAR);
+  this->svm->setNu(0.5);
+  this->svm->setTermCriteria(cv::TermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8));
+
+  this->recognitionThreshold = tau_r;
 }
 
 void PlaceRecognizer::placeCallback(std_msgs::Int16 placeId){
   // Callback function for place detection.
   // The input is the place id signal from the place detection node
-  int recognized = 0;
   std::cout << "Place Callback Received" << std::endl;
   currentPlace = dbmanager.getPlace((int)placeId.data);
+  bool recognized;
   //PlaceDivider::clusterPlace(this->currentPlace);
   int lpCount = learnedPlaces.size();
   if (lpCount < MIN_NO_PLACES) {
     learnCurrentPlace();
   }
   else {
+    PT.generatePlaceDendrogram();
     recognized = recognizeCurrentPlace();
-    if (recognized > 0) updateTree();
+    if (recognized) updateTree();
     else learnCurrentPlace();
   }
 }
@@ -55,7 +64,7 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
 
       std::cout <<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize << std::endl;
 
-      LearnedPlace::lpCounter = previousKnowledgeSize+1;
+      LearnedPlace::lpCounter = previousKnowledgeSize + 1;
 
       for (int i = 1; i <= previousKnowledgeSize; i++)
       {
@@ -66,12 +75,91 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
   } // if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
 }
 
-int PlaceRecognizer::recognizeCurrentPlace(){
-  std::cout << "I am in recognizeCurrentPlace()" << std::endl;
-  return 0;
+bool PlaceRecognizer::recognizeCurrentPlace(){
+  //Recognition part is calculated as in the paper: "An Integrated Model of Autonomous Topological Spatial Cognition"
+  float result, votePercentage,
+  firstDistance, secondDistance,
+  distanceLeft,distanceRight;
+  bool recognized;
+  // this -> svm -> train(learnedPlaces,currentPlace)
+  std::vector<treeNode> currentTree = PT.tree;
+  std::vector<int> leftMembers, rightMembers, closestMembers;
+  for (int i = PT.tree.size() - 1; i >= 0; i--){
+    int leftNode = currentTree[i].left;
+    int rightNode = currentTree[i].right;
+    if (leftNode < 0){
+      distanceLeft = cv::norm(currentPlace.meanInvariant,PT.nodeMeans[-leftNode - 1],cv::NORM_L2SQR);
+      leftMembers = PT.nodeMembers[-leftNode - 1];
+    }
+    else{
+      distanceLeft = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[leftNode],cv::NORM_L2SQR);
+      leftMembers = {leftNode};
+      std::cout << "leftNode: " << leftNode << std::endl;
+    }
+    if (rightNode < 0){
+      distanceRight = cv::norm(currentPlace.meanInvariant,PT.nodeMeans[-rightNode - 1],cv::NORM_L2SQR);
+      rightMembers = PT.nodeMembers[-rightNode - 1];
+    }
+    else{
+      distanceRight = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[rightNode],cv::NORM_L2SQR);
+      rightMembers = {rightNode};
+      std::cout << "rightNode: " << rightNode << std::endl;
+    }
+    if(distanceLeft < distanceRight){
+      firstDistance = distanceLeft;
+      secondDistance = distanceRight;
+      closestMembers = leftMembers;
+    }
+    else{
+      firstDistance = distanceRight;
+      secondDistance = distanceLeft;
+      closestMembers = rightMembers;
+    }
+
+    votePercentage = calcVote(closestMembers);
+    recognized = (firstDistance + firstDistance / secondDistance + (1 - votePercentage)) > recognitionThreshold;
+  }
+
+  return recognized;
+}
+
+float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
+  cv::Mat trainVector,testVector,svmResult;
+  int currentMember;
+  float voteSum;
+
+  for(int i = 0; i < closestMembers.size(); i++)
+  {
+    currentMember = closestMembers[i];
+    if (trainVector.empty())
+    {
+      trainVector = learnedPlaces[currentMember].memberInvariants;
+    }
+    else
+    {
+      cv::hconcat(trainVector,learnedPlaces[currentMember].memberInvariants,trainVector);
+    }
+  }
+
+  double minVal = 0, maxVal = 0;
+  cv::minMaxLoc(trainVector,&minVal,&maxVal);
+  trainVector = (trainVector - minVal)/(maxVal - minVal);
+  testVector = currentPlace.memberInvariants.clone();
+  testVector = (testVector - minVal)/(maxVal - minVal);;
+
+  cv::transpose(testVector,testVector);
+
+  svm -> train(trainVector,cv::ml::COL_SAMPLE,cv::Mat::ones(1,trainVector.cols,CV_32FC1));
+  voteSum = svm->predict(testVector,svmResult);
+  std::cout << "SVM result: " << svmResult << std::endl;
+
+  std::cout << "voteSum: " << voteSum << std::endl;
+  return voteSum;
 }
 
 void PlaceRecognizer::updateTree(){
+  // Place is recognized, we do not add a new node to tree but update the nodes
+  // and meanInvariant of the places
   std::cout << "I am in updateTree()" << std::endl;
 }
 

@@ -8,6 +8,7 @@
 #include <std_msgs/Int8.h>
 #include <std_msgs/Int16.h>
 #include <vector>
+#include <opencv2/ml/ml.hpp>
 
 #include <QDebug>
 #include <QString>
@@ -31,11 +32,14 @@ private:
   std::vector<Place> detectedPlaces;
   std::vector<LearnedPlace> learnedPlaces;
   void learnCurrentPlace();
-  int recognizeCurrentPlace();
+  bool recognizeCurrentPlace();
   void updateTree();
+  cv::Ptr<cv::ml::SVM> svm;
+  float recognitionThreshold;
+  float calcVote(std::vector<int> closestMembers);
 
 public:
-  PlaceRecognizer();
+  PlaceRecognizer(float tau_r);
   Place currentPlace;
   void closeDatabases();
   PlaceTree PT;
