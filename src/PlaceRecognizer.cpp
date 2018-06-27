@@ -12,7 +12,7 @@ PlaceRecognizer::PlaceRecognizer(float tau_r) : PT(0){
   this->svm = cv::ml::SVM::create();
   this->svm->setType(cv::ml::SVM::ONE_CLASS);
   this->svm->setKernel(cv::ml::SVM::LINEAR);
-  this->svm->setNu(0.5);
+  this->svm->setNu(0.9);
   this->svm->setTermCriteria(cv::TermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8));
 
   this->recognitionThreshold = tau_r;
@@ -79,12 +79,12 @@ bool PlaceRecognizer::recognizeCurrentPlace(){
   //Recognition part is calculated as in the paper: "An Integrated Model of Autonomous Topological Spatial Cognition"
   float result, votePercentage,
   firstDistance, secondDistance,
-  distanceLeft,distanceRight;
+  distanceLeft,distanceRight, costResult;
   bool recognized;
   // this -> svm -> train(learnedPlaces,currentPlace)
   std::vector<treeNode> currentTree = PT.tree;
   std::vector<int> leftMembers, rightMembers, closestMembers;
-  for (int i = PT.tree.size() - 1; i >= 0; i--){
+  for (int i = currentTree.size() - 1; i >= 0; i--){
     int leftNode = currentTree[i].left;
     int rightNode = currentTree[i].right;
     if (leftNode < 0){
@@ -94,7 +94,6 @@ bool PlaceRecognizer::recognizeCurrentPlace(){
     else{
       distanceLeft = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[leftNode],cv::NORM_L2SQR);
       leftMembers = {leftNode};
-      std::cout << "leftNode: " << leftNode << std::endl;
     }
     if (rightNode < 0){
       distanceRight = cv::norm(currentPlace.meanInvariant,PT.nodeMeans[-rightNode - 1],cv::NORM_L2SQR);
@@ -103,8 +102,10 @@ bool PlaceRecognizer::recognizeCurrentPlace(){
     else{
       distanceRight = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[rightNode],cv::NORM_L2SQR);
       rightMembers = {rightNode};
-      std::cout << "rightNode: " << rightNode << std::endl;
     }
+    std::cout << "Left Node: " << leftNode << std::endl;
+    std::cout << "Right Node: " << rightNode << std::endl;
+
     if(distanceLeft < distanceRight){
       firstDistance = distanceLeft;
       secondDistance = distanceRight;
@@ -117,7 +118,9 @@ bool PlaceRecognizer::recognizeCurrentPlace(){
     }
 
     votePercentage = calcVote(closestMembers);
-    recognized = (firstDistance + firstDistance / secondDistance + (1 - votePercentage)) > recognitionThreshold;
+    costResult = (firstDistance + firstDistance / secondDistance + (1 - votePercentage));
+    recognized = costResult < recognitionThreshold;
+    std::cout << "costResult: " << costResult << std::endl;
   }
 
   return recognized;
@@ -126,7 +129,7 @@ bool PlaceRecognizer::recognizeCurrentPlace(){
 float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
   cv::Mat trainVector,testVector,svmResult;
   int currentMember;
-  float voteSum;
+  float voteSum, votePercentage;
 
   for(int i = 0; i < closestMembers.size(); i++)
   {
@@ -150,11 +153,11 @@ float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
   cv::transpose(testVector,testVector);
 
   svm -> train(trainVector,cv::ml::COL_SAMPLE,cv::Mat::ones(1,trainVector.cols,CV_32FC1));
-  voteSum = svm->predict(testVector,svmResult);
-  std::cout << "SVM result: " << svmResult << std::endl;
-
-  std::cout << "voteSum: " << voteSum << std::endl;
-  return voteSum;
+  svm -> predict(testVector,svmResult);
+  voteSum = cv::sum(svmResult)[0];
+  votePercentage = voteSum / (float)svmResult.rows;
+  std::cout << "votePercentage: "<<votePercentage << std::endl;
+  return votePercentage;
 }
 
 void PlaceRecognizer::updateTree(){
