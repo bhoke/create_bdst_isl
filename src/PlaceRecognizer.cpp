@@ -32,8 +32,6 @@ void PlaceRecognizer::placeCallback(std_msgs::Int16 placeId){
   else {
     PT.generatePlaceDendrogram();
     recognized = recognizeCurrentPlace();
-    if (recognized) updateTree();
-    else learnCurrentPlace();
   }
 }
 
@@ -75,55 +73,66 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
   } // if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
 }
 
-bool PlaceRecognizer::recognizeCurrentPlace(){
+int PlaceRecognizer::recognizeCurrentPlace(){
   //Recognition part is calculated as in the paper: "An Integrated Model of Autonomous Topological Spatial Cognition"
-  float result, votePercentage,
-  firstDistance, secondDistance,
-  distanceLeft,distanceRight, costResult;
+  double result, votePercentage,
+  highCorr, secondCorr,
+  corrLeft,corrRight, corrResult;
   bool recognized;
-  // this -> svm -> train(learnedPlaces,currentPlace)
   std::vector<treeNode> currentTree = PT.tree;
   std::vector<int> leftMembers, rightMembers, closestMembers;
-  for (int i = currentTree.size() - 1; i >= 0; i--){
-    int leftNode = currentTree[i].left;
-    int rightNode = currentTree[i].right;
+  int i = 2 - currentTree.size();
+  int j,k;
+  // this -> svm -> train(learnedPlaces,currentPlace)
+  while(i < 0){
+    int leftNode = currentTree[-i -1].left;
+    int rightNode = currentTree[-i -1].right;
     if (leftNode < 0){
-      distanceLeft = cv::norm(currentPlace.meanInvariant,PT.nodeMeans[-leftNode - 1],cv::NORM_L2SQR);
+      corrLeft = fabs(cv::compareHist(currentPlace.meanInvariant,PT.nodeMeans[-leftNode - 1],CV_COMP_CORREL));
       leftMembers = PT.nodeMembers[-leftNode - 1];
     }
     else{
-      distanceLeft = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[leftNode],cv::NORM_L2SQR);
+      corrLeft = fabs(cv::compareHist(currentPlace.meanInvariant,PT.allInvariantMeans[leftNode],CV_COMP_CORREL));
       leftMembers = {leftNode};
     }
     if (rightNode < 0){
-      distanceRight = cv::norm(currentPlace.meanInvariant,PT.nodeMeans[-rightNode - 1],cv::NORM_L2SQR);
+      corrRight = fabs(cv::compareHist(currentPlace.meanInvariant,PT.nodeMeans[-rightNode - 1],CV_COMP_CORREL));
       rightMembers = PT.nodeMembers[-rightNode - 1];
     }
     else{
-      distanceRight = cv::norm(currentPlace.meanInvariant,PT.allInvariantMeans[rightNode],cv::NORM_L2SQR);
+      corrRight = fabs(cv::compareHist(currentPlace.meanInvariant,PT.allInvariantMeans[rightNode],CV_COMP_CORREL));
       rightMembers = {rightNode};
     }
+    j = leftNode; k = rightNode;
     std::cout << "Left Node: " << leftNode << std::endl;
     std::cout << "Right Node: " << rightNode << std::endl;
 
-    if(distanceLeft < distanceRight){
-      firstDistance = distanceLeft;
-      secondDistance = distanceRight;
+    if(corrLeft > corrRight){
+      highCorr = corrLeft;
+      secondCorr = corrRight;
       closestMembers = leftMembers;
+      i = j;
     }
     else{
-      firstDistance = distanceRight;
-      secondDistance = distanceLeft;
+      highCorr = corrRight;
+      secondCorr = corrLeft;
       closestMembers = rightMembers;
+      i = k;
     }
 
     votePercentage = calcVote(closestMembers);
-    costResult = (firstDistance + firstDistance / secondDistance + (1 - votePercentage));
-    recognized = costResult < recognitionThreshold;
-    std::cout << "costResult: " << costResult << std::endl;
+    corrResult = highCorr + secondCorr / highCorr + votePercentage;
+    recognized = corrResult > recognitionThreshold;
+    std::cout << "corrResult: " << corrResult << std::endl;
+    if (!recognized) {
+      std::cout << "No recognition... Returning" << std::endl;
+      learnCurrentPlace();
+      return -1;
+    }
   }
-
-  return recognized;
+    std::cout << "Recognized with place id: " << i << std::endl;
+    updateTree(i);
+    return i;
 }
 
 float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
@@ -160,10 +169,10 @@ float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
   return votePercentage;
 }
 
-void PlaceRecognizer::updateTree(){
+void PlaceRecognizer::updateTree(int i){
   // Place is recognized, we do not add a new node to tree but update the nodes
   // and meanInvariant of the places
-  std::cout << "I am in updateTree()" << std::endl;
+  std::cout << "Updating " << i << "th place!" << std::endl;
 }
 
 void PlaceRecognizer::learnCurrentPlace(){

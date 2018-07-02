@@ -32,8 +32,8 @@ private:
   std::vector<Place> detectedPlaces;
   std::vector<LearnedPlace> learnedPlaces;
   void learnCurrentPlace();
-  bool recognizeCurrentPlace();
-  void updateTree();
+  int recognizeCurrentPlace();
+  void updateTree(int i);
   cv::Ptr<cv::ml::SVM> svm;
   float recognitionThreshold;
   float calcVote(std::vector<int> closestMembers);
