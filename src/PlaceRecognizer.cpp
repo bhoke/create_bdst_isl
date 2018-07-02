@@ -1,8 +1,7 @@
 #include "PlaceRecognizer.h"
 
-PlaceRecognizer::PlaceRecognizer(float tau_r) : PT(0){
+PlaceRecognizer::PlaceRecognizer(float tau_r){
 
-  PT = PlaceTree(0);
   this -> plIDSubscriber = this->nh.subscribe<std_msgs::Int16>
   ("placeDetectionISL/placeID", 5, &PlaceRecognizer::placeCallback, this);
 
@@ -39,11 +38,12 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
 {
   // A callback function for the main file
   // the input is main file path string from the place detection node
+
   QString mainFilePath = QString::fromStdString(mainDir.data);
   qDebug() <<"Main File Path Callback received" << mainFilePath;
   QString detected_places_dbpath = mainFilePath + "/detected_places.db";
   QString knowledge_dbpath = mainFilePath + "/knowledge.db";
-
+  int previousKnowledgeSize;
   if(dbmanager.openDB(detected_places_dbpath))
   {
     std::cout <<"Places db opened" << std::endl;
@@ -51,24 +51,24 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
   if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
   {
     std::cout <<"Knowledge db opened" << std::endl;
-
-    if(knowledgedbmanager.getLearnedPlaceMaxID() == 0)
+    previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
+    if(previousKnowledgeSize == 0)
     {
       std::cout <<"Starting with empty knowledge" << std::endl;
     }
     else
     {
-      int previousKnowledgeSize = knowledgedbmanager.getLearnedPlaceMaxID();
-
-      std::cout <<"Starting with previous knowledge. Previous number of places: "<<previousKnowledgeSize << std::endl;
-
+      std::cout <<"Starting with previous knowledge. Previous number of places: "<< previousKnowledgeSize << std::endl;
       LearnedPlace::lpCounter = previousKnowledgeSize + 1;
-
-      for (int i = 1; i <= previousKnowledgeSize; i++)
-      {
-        LearnedPlace aPlace = knowledgedbmanager.getLearnedPlace(i);
+      LearnedPlace aPlace;
+      for (int i = 1; i <= previousKnowledgeSize; i++){
+        aPlace = knowledgedbmanager.getLearnedPlace(i);
         learnedPlaces.push_back(aPlace);
+        PT.allInvariantMeans.push_back(aPlace.meanInvariant);
       }
+      for (int i = 0; i < previousKnowledgeSize; i++)
+        PT.addNode(learnedPlaces[i].meanInvariant);
+
     } // Previous knowledge
   } // if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
 }
@@ -130,9 +130,9 @@ int PlaceRecognizer::recognizeCurrentPlace(){
       return -1;
     }
   }
-    std::cout << "Recognized with place id: " << i << std::endl;
-    updateTree(i);
-    return i;
+  std::cout << "Recognized with place id: " << i << std::endl;
+  updateTree(i);
+  return i;
 }
 
 float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
@@ -172,7 +172,9 @@ float PlaceRecognizer::calcVote(std::vector<int> closestMembers){
 void PlaceRecognizer::updateTree(int i){
   // Place is recognized, we do not add a new node to tree but update the nodes
   // and meanInvariant of the places
-  std::cout << "Updating " << i << "th place!" << std::endl;
+  std::cout << "Updating " << i << "th place..." << std::endl;
+  learnedPlaces[i].memberPlaceIDs.push_back(currentPlace.id);
+  cv::hconcat(learnedPlaces[i].memberInvariants,currentPlace.memberInvariants,learnedPlaces[i].memberInvariants);
 }
 
 void PlaceRecognizer::learnCurrentPlace(){

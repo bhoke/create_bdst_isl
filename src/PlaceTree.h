@@ -6,7 +6,7 @@
 class PlaceTree {
 
 public:
-  PlaceTree(int placeCount);
+  PlaceTree(int placeCount = 0);
   void generatePlaceDendrogram();
   void addNode(cv::Mat currentPlaceMean);
   std::vector<int> levels;

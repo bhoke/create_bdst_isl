@@ -15,6 +15,7 @@ bool nodecompare(treeNode node1, treeNode node2){
 void PlaceTree::generatePlaceDendrogram(){
   int j,k;
   int nodeCount = placeCount - 1;
+  std::cout << "Node Count: " << nodeCount << std::endl;
   nodeMembers.clear();
   nodeMeans.clear();
   tree.clear();
@@ -79,8 +80,9 @@ void PlaceTree::addNode(cv::Mat currentPlaceMean)
   phi.push_back(placeCount);
   lambda.push_back(DBL_MAX);
   std::vector<double> distNewNode;
-  for (int i = 0; i < placeCount; i++)
-  distNewNode.push_back(cv::norm(currentPlaceMean, allInvariantMeans[i]));
+  for (int i = 0; i < placeCount; i++){
+    distNewNode.push_back(cv::norm(currentPlaceMean, allInvariantMeans[i]));
+  }
   for (int i = 0; i < placeCount; i++) {
     if (lambda[i] >= distNewNode[i])
     {
