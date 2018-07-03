@@ -3,10 +3,10 @@
 PlaceRecognizer::PlaceRecognizer(float tau_r){
 
   this -> plIDSubscriber = this->nh.subscribe<std_msgs::Int16>
-  ("placeDetectionISL/placeID", 5, &PlaceRecognizer::placeCallback, this);
+  ("place_detection_isl/placeID", 5, &PlaceRecognizer::placeCallback, this);
 
   this -> filePathSubscriber = this->nh.subscribe<std_msgs::String>
-  ("placeDetectionISL/mainFilePath",2, &PlaceRecognizer::mainFilePathCallback,this);
+  ("place_detection_isl/mainFilePath",2, &PlaceRecognizer::mainFilePathCallback,this);
 
   this->svm = cv::ml::SVM::create();
   this->svm->setType(cv::ml::SVM::ONE_CLASS);

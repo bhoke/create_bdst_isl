@@ -2,7 +2,7 @@
 <package>
   <name>create_bdst_isl</name>
   <version>0.0.0</version>
-  <description>createBDSTISL</description>
+  <description>create_bdst_isl</description>
   <maintainer email="berkan.hoke@boun.edu.tr">Berkan Höke</maintainer>
   <license>BSD</license>
   <url type="website">http://github.com/islboun</url>
