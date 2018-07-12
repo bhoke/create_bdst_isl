@@ -12,7 +12,7 @@ int main (int argc, char** argv)
   // Initialize ROS
   ros::init (argc, argv, "create_bdst_isl");
 
-  tau_r = 2.5;
+  tau_r = 0;
 
   std::cout <<"tau_r: "<< tau_r << std::endl;
 

@@ -10,7 +10,7 @@ PlaceRecognizer::PlaceRecognizer(float tau_r){
 
   this->svm = cv::ml::SVM::create();
   this->svm->setType(cv::ml::SVM::ONE_CLASS);
-  this->svm->setKernel(cv::ml::SVM::LINEAR);
+  this->svm->setKernel(cv::ml::SVM::RBF);
   this->svm->setNu(0.9);
   this->svm->setTermCriteria(cv::TermCriteria(CV_TERMCRIT_ITER, 1000, 1e-8));
 
@@ -23,7 +23,7 @@ void PlaceRecognizer::placeCallback(std_msgs::Int16 placeId){
   std::cout << "Place Callback Received" << std::endl;
   currentPlace = dbmanager.getPlace((int)placeId.data);
   bool recognized;
-  //PlaceDivider::clusterPlace(this->currentPlace);
+  PlaceDivider::clusterPlace(this->currentPlace);
   int lpCount = learnedPlaces.size();
   if (lpCount < MIN_NO_PLACES) {
     learnCurrentPlace();
@@ -173,8 +173,14 @@ void PlaceRecognizer::updateTree(int i){
   // Place is recognized, we do not add a new node to tree but update the nodes
   // and meanInvariant of the places
   std::cout << "Updating " << i << "th place..." << std::endl;
-  learnedPlaces[i].memberPlaceIDs.push_back(currentPlace.id);
-  cv::hconcat(learnedPlaces[i].memberInvariants,currentPlace.memberInvariants,learnedPlaces[i].memberInvariants);
+  LearnedPlace placeToBeUpdated = learnedPlaces[i];
+  placeToBeUpdated.memberPlaceIDs.push_back(currentPlace.id);  // Add newest ID to that recognized place
+  cv::hconcat(placeToBeUpdated.memberInvariants,currentPlace.memberInvariants,placeToBeUpdated.memberInvariants);
+  placeToBeUpdated.memberBPIDs.reserve(placeToBeUpdated.memberBPIDs.size() + currentPlace.memberBPIDs.size());
+  placeToBeUpdated.memberBPIDs.insert(placeToBeUpdated.memberBPIDs.end(), currentPlace.memberBPIDs.begin(), currentPlace.memberBPIDs.end());
+  placeToBeUpdated.calculateMeanInvariant();
+  learnedPlaces[i] = placeToBeUpdated;
+  knowledgedbmanager.updateLearnedPlace(i,placeToBeUpdated);
 }
 
 void PlaceRecognizer::learnCurrentPlace(){

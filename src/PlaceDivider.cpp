@@ -19,7 +19,7 @@ void PlaceDivider::clusterPlace(Place currentPlace)
     data[i][j] = currentInvariants.at<float>(i,j);
   }
 
-  treeNode* placeTree = treecluster(nrows,ncols,data,1,'w',NULL);
+  treeNode* placeTree = treecluster(nrows,ncols,data,1,'s',NULL);
   double *differences = nodeDiff(placeTree,ncols-2);
   int clusterCount = 2 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
   std::cout <<"Cluster Count is: "<<  clusterCount << std::endl;
@@ -34,7 +34,7 @@ void PlaceDivider::clusterPlace(Place currentPlace)
     subPlace temp_sp;
     int k = 0;
     for (int j = 0; j < count[i]; j++){
-      temp_sp.memberInvariants = cv::Mat::zeros(HARMONIC1 * HARMONIC2 * 5,count[i], CV_64F);
+      temp_sp.memberInvariants = cv::Mat::zeros(HARMONIC1 * HARMONIC2 * 6,count[i], CV_64F);
       currentPlace.memberInvariants.col(placeClusters[i][j]).copyTo(temp_sp.memberInvariants.col(k));
       k++;
     }
@@ -51,6 +51,8 @@ void PlaceDivider::clusterPlace(Place currentPlace)
 // HELPER FUNCTIONS
 double* nodeDiff(treeNode *tn,int nnodes)
 {
+  // Calculation of adjacent nodes to determine maximum difference leap
+  // Function starts to calculate from the top of the tree so we can easily detemrine the number of clusters
   double *result = new double[nnodes];
   for(int i = nnodes; i > 0; i--)
   {

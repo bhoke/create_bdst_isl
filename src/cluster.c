@@ -1159,7 +1159,8 @@ If a memory error occurs, treecluster returns NULL.
 
 ========================================================================
 */
-{ treeNode* result = NULL;
+{
+  treeNode* result = NULL;
   const int nelements = (transpose==0) ? nrows : ncolumns;
   const int ldistmatrix = (distmatrix==NULL && method!='s') ? 1 : 0;
   if (nelements < 2) return NULL;
@@ -1167,8 +1168,8 @@ If a memory error occurs, treecluster returns NULL.
   if(ldistmatrix)
   distmatrix = distancematrix(nrows, ncolumns, data, transpose);
 
-  switch(method)
-  { case 's':
+  switch(method) {
+  case 's':
   result = pslcluster(nrows, ncolumns, data, distmatrix,transpose);
   break;
   case 'm':
