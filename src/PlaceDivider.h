@@ -10,7 +10,7 @@ extern "C" {
 
 class PlaceDivider{
 public:
-  static void clusterPlace(Place pl);
+  static std::vector<Place> clusterPlace(Place pl);
 private:
   PlaceDivider(){};
 };

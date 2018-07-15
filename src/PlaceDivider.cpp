@@ -2,7 +2,7 @@
 
 double* nodeDiff(treeNode *tn,int nnodes);
 
-void PlaceDivider::clusterPlace(Place currentPlace)
+std::vector<Place> PlaceDivider::clusterPlace(Place currentPlace)
 {
   //Function which clusters a single place into subplaces
   cv::Mat currentInvariants = currentPlace.memberInvariants;
@@ -21,31 +21,28 @@ void PlaceDivider::clusterPlace(Place currentPlace)
 
   treeNode* placeTree = treecluster(nrows,ncols,data,1,'s',NULL);
   double *differences = nodeDiff(placeTree,ncols-2);
-  int clusterCount = 2 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
-  std::cout <<"Cluster Count is: "<<  clusterCount << std::endl;
+  int clusterCount = 1 + (int)std::distance(differences,std::max_element(differences,differences + ncols-2));
   int* placeClusters[clusterCount];
-  int* count = new int[clusterCount];
+  int count[clusterCount];
   cuttree(ncols,placeTree,clusterCount,clusterid,placeClusters,count);
-  std::vector <subPlace> currentSPs;
-
-  std::cout << "Cols = " << currentPlace.memberInvariants.cols << " Rows = " << currentPlace.memberInvariants.rows << std::endl ;
+  std::vector <Place> currentSPs;
 
   for (int i = 0; i < clusterCount; i++){
-    subPlace temp_sp;
-    int k = 0;
-    for (int j = 0; j < count[i]; j++){
-      temp_sp.memberInvariants = cv::Mat::zeros(HARMONIC1 * HARMONIC2 * 6,count[i], CV_64F);
-      currentPlace.memberInvariants.col(placeClusters[i][j]).copyTo(temp_sp.memberInvariants.col(k));
-      k++;
+    if(count[i] > 5){
+      Place temp_sp;
+      temp_sp.memberInvariants = cv::Mat::zeros(HARMONIC1 * HARMONIC2 * 6,count[i], CV_32F);
+      for (int j = 0; j < count[i]; j++){
+        currentPlace.memberInvariants.col(placeClusters[i][j]).copyTo(temp_sp.memberInvariants.col(j));
+        temp_sp.memberBPIDs.push_back(placeClusters[i][j]);
+      }
+      cv::reduce(temp_sp.memberInvariants,temp_sp.meanInvariant,1,CV_REDUCE_AVG);
+      currentSPs.push_back(temp_sp);
     }
-    temp_sp.calculateMeanInvariant();
   }
-  std::cout << "placeTree for place ID " << currentPlace.id << ": " << std::endl;
-  for (int i = 0; i < ncols - 1 ; i++)
-  std::cout << placeTree[i].left << "\t" << placeTree[i].right << "\t"
-  << placeTree[i].distance << "\t" << std::endl;
 
-  delete []clusterid;
+  std::cout << "Contains "<<currentSPs.size() << "subplaces" << std::endl;
+  delete [] clusterid;
+  return currentSPs;
 }
 
 // HELPER FUNCTIONS

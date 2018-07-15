@@ -23,15 +23,29 @@ void PlaceRecognizer::placeCallback(std_msgs::Int16 placeId){
   std::cout << "Place Callback Received" << std::endl;
   currentPlace = dbmanager.getPlace((int)placeId.data);
   bool recognized;
-  PlaceDivider::clusterPlace(this->currentPlace);
-  int lpCount = learnedPlaces.size();
-  if (lpCount < MIN_NO_PLACES) {
-    learnCurrentPlace();
+  std::cout << "Clustering is ON" << std::endl;
+  int currentID = currentPlace.id;
+  std::vector<Place> memberSubPlaces = PlaceDivider::clusterPlace(this->currentPlace);
+  for (int k = 0; k < memberSubPlaces.size(); k ++){
+    currentPlace = memberSubPlaces[k];
+    int lpCount = learnedPlaces.size();
+    std::cout << lpCount << std::endl;
+    if (lpCount < MIN_NO_PLACES) {
+      learnCurrentPlace();
+    }
+    else {
+      PT.generatePlaceDendrogram();
+      recognized = recognizeCurrentPlace();
+    }
   }
-  else {
-    PT.generatePlaceDendrogram();
-    recognized = recognizeCurrentPlace();
-  }
+  //   int lpCount = learnedPlaces.size();
+  //   if (lpCount < MIN_NO_PLACES) {
+  //     learnCurrentPlace();
+  //   }
+  //   else {
+  //     PT.generatePlaceDendrogram();
+  //     recognized = recognizeCurrentPlace();
+  //   }
 }
 
 void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
@@ -67,7 +81,7 @@ void PlaceRecognizer::mainFilePathCallback(std_msgs::String mainDir)
         PT.allInvariantMeans.push_back(aPlace.meanInvariant);
       }
       for (int i = 0; i < previousKnowledgeSize; i++)
-        PT.addNode(learnedPlaces[i].meanInvariant);
+      PT.addNode(learnedPlaces[i].meanInvariant);
 
     } // Previous knowledge
   } // if(knowledgedbmanager.openDB(knowledge_dbpath,"knowledge"))
@@ -81,7 +95,7 @@ int PlaceRecognizer::recognizeCurrentPlace(){
   bool recognized;
   std::vector<treeNode> currentTree = PT.tree;
   std::vector<int> leftMembers, rightMembers, closestMembers;
-  int i = 2 - currentTree.size();
+  int i = 1 - currentTree.size();
   int j,k;
   // this -> svm -> train(learnedPlaces,currentPlace)
   while(i < 0){

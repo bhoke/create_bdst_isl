@@ -389,7 +389,7 @@ error occured, all elements in clusterid are set to -1.
   const int n = nelements-nclusters; /* number of treeNodes to join */
   int* treeNodeid;
   for (i=0; i<nclusters; i++){
-    subPlaces[i] = NULL;
+    subPlaces[i] = malloc(sizeof(int));
     count[i] = 0;
   }
 
@@ -447,9 +447,6 @@ error occured, all elements in clusterid are set to -1.
       subPlaces[j][count[j] - 1] = k;
     }
   }
-  // for (i = 0; i < nclusters; i++)
-  // for (j = 0; j < count[i]; j++)
-  // printf("I love subplace I lover very subplace[%d][%d]: %d \n", i,j, subPlaces[i][j]);
 
   free(treeNodeid);
   return;

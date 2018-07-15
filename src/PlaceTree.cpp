@@ -15,7 +15,6 @@ bool nodecompare(treeNode node1, treeNode node2){
 void PlaceTree::generatePlaceDendrogram(){
   int j,k;
   int nodeCount = placeCount - 1;
-  std::cout << "Node Count: " << nodeCount << std::endl;
   nodeMembers.clear();
   nodeMeans.clear();
   tree.clear();
